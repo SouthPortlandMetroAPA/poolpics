@@ -23,92 +23,138 @@
   html, body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
   body { padding-bottom: 100px; min-height: 100vh; }
 
+  /* ── Layout container (caps content at 1320px on big monitors so the
+        feed doesn't stretch edge-to-edge and look sparse) ── */
+  .container { max-width: 1320px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 1024px) { .container { padding: 0 32px; } }
+
   /* ── Header (red→blue gradient, persistent across event switches) ── */
   .header {
     background: linear-gradient(135deg, var(--spm-primary), var(--spm-accent));
     color: #fff;
-    padding: 14px 16px 12px;
+    padding: 14px 0 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     position: sticky; top: 0; z-index: 50;
   }
   .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .header h1 { font-size: 1.4rem; font-weight: 900; letter-spacing: 0.01em; }
+  .header h1 {
+    font-size: clamp(1.4rem, 1rem + 1.5vw, 2rem);
+    font-weight: 900; letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .brand-dot {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; background: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
+  }
   .event-picker {
     background: rgba(255,255,255,0.15);
     border: 1.5px solid rgba(255,255,255,0.45);
     color: #fff;
     border-radius: var(--pill);
-    padding: 6px 28px 6px 12px;
-    font-size: 0.85rem; font-weight: 700;
+    padding: 8px 32px 8px 16px;
+    font-size: clamp(0.85rem, 0.7rem + 0.3vw, 1rem);
+    font-weight: 700;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path fill="%23fff" d="M1 3l4 4 4-4z"/></svg>');
     background-repeat: no-repeat;
-    background-position: right 8px center;
+    background-position: right 10px center;
     max-width: 60vw;
     text-overflow: ellipsis;
+    transition: background 0.15s, border-color 0.15s;
   }
+  .event-picker:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.7); }
   .event-picker option { color: #1a1a1a; }
 
   /* ── Event meta strip ── */
   .event-meta {
     background: var(--card);
     border-bottom: 1px solid var(--border);
-    padding: 14px 16px;
+    padding: 18px 0;
   }
-  .event-meta .ev-name { font-size: 1.1rem; font-weight: 800; color: var(--spm-accent); }
-  .event-meta .ev-dates { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-  .event-meta .ev-loc { font-size: 0.78rem; color: var(--muted); }
-  .event-meta .ev-desc { font-size: 0.85rem; color: var(--text); margin-top: 6px; line-height: 1.45; }
+  .event-meta .ev-name {
+    font-size: clamp(1.15rem, 0.95rem + 0.7vw, 1.6rem);
+    font-weight: 800; color: var(--spm-accent);
+    letter-spacing: -0.01em;
+  }
+  .event-meta .ev-dates {
+    font-size: clamp(0.78rem, 0.7rem + 0.2vw, 0.92rem);
+    color: var(--muted); margin-top: 4px; font-weight: 600;
+  }
+  .event-meta .ev-desc {
+    font-size: clamp(0.88rem, 0.8rem + 0.2vw, 1rem);
+    color: var(--text); margin-top: 8px; line-height: 1.55;
+    max-width: 70ch;
+  }
   .event-meta .ev-closed {
     display: inline-block;
-    margin-top: 6px;
-    padding: 3px 10px;
+    margin-top: 8px;
+    padding: 4px 12px;
     border-radius: var(--pill);
     background: rgba(245,158,11,0.15); color: #b45309;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   }
 
-  /* ── Feed ── */
-  .feed { padding: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  @media (min-width: 600px) { .feed { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 900px) { .feed { grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 18px; } }
+  /* ── Feed (responsive: auto-fill column count by viewport width) ── */
+  .feed {
+    padding: 16px 0 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  @media (min-width: 600px)  { .feed { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; padding: 20px 0 28px; } }
+  @media (min-width: 1024px) { .feed { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; padding: 24px 0 36px; } }
+  @media (min-width: 1440px) { .feed { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; } }
 
   .post {
     background: var(--card);
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     cursor: pointer;
-    transition: transform 0.12s;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }
   .post:active { transform: scale(0.97); }
-  .post img {
-    width: 100%; height: 0; padding-bottom: 100%;
+  /* Hover lift only on devices that actually have a hover-capable pointer
+     (desktop with mouse, not touch). Avoids sticky :hover state on tap. */
+  @media (hover: hover) {
+    .post:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.16); }
+    .post:hover .post-img { transform: scale(1.04); }
+  }
+  .post-img-wrap { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: #ddd; }
+  .post-img {
+    width: 100%; height: 100%;
     object-fit: cover;
     display: block;
-    background: #ddd no-repeat center / cover;
+    transition: transform 0.4s ease;
   }
   .post .caption {
-    padding: 8px 10px 10px;
-    font-size: 0.8rem;
-    line-height: 1.35;
+    padding: 10px 12px 12px;
+    font-size: 0.86rem;
+    line-height: 1.4;
     color: var(--text);
     word-break: break-word;
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   }
-  .post .ts { padding: 0 10px 8px; font-size: 0.68rem; color: var(--muted); }
+  .post .ts {
+    padding: 0 12px 10px;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
   .empty {
     grid-column: 1 / -1;
     text-align: center;
-    padding: 60px 20px;
+    padding: 80px 20px;
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: clamp(0.9rem, 0.85rem + 0.2vw, 1.05rem);
   }
-  .empty .empty-emoji { font-size: 3rem; display: block; margin-bottom: 8px; }
+  .empty .empty-emoji { font-size: 3.5rem; display: block; margin-bottom: 12px; }
 
   /* ── Floating Add Photo button ── */
   .fab {
@@ -160,15 +206,27 @@
     z-index: 110;
   }
 
-  /* ── Lightbox ── */
+  /* ── Lightbox ── max-width grows on desktop so the photo fills the
+        actual viewing area instead of being cramped in a tiny modal. */
+  #lightbox .modal-box { max-width: min(92vw, 1100px); }
   .lightbox-img-wrap {
     background: #000;
     border-radius: var(--radius);
     overflow: hidden;
   }
-  .lightbox-img { width: 100%; max-height: 70vh; object-fit: contain; display: block; }
-  .lightbox-caption { padding: 12px 4px 4px; font-size: 0.9rem; line-height: 1.4; color: #fff; }
-  .lightbox-ts { padding: 4px 4px 0; font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+  .lightbox-img { width: 100%; max-height: 78vh; object-fit: contain; display: block; }
+  .lightbox-caption {
+    padding: 14px 4px 4px;
+    font-size: clamp(0.9rem, 0.85rem + 0.2vw, 1.05rem);
+    line-height: 1.5; color: #fff;
+    max-width: 70ch;
+  }
+  .lightbox-ts {
+    padding: 4px 4px 0;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.65);
+    font-weight: 600;
+  }
 
   /* ── Submission form ── */
   .form-section { margin-bottom: 14px; }
@@ -304,20 +362,26 @@
 
 <!-- Header -->
 <div class="header">
-  <div class="header-row">
-    <h1>PoolPics</h1>
-    <select class="event-picker" id="eventPicker"></select>
+  <div class="container">
+    <div class="header-row">
+      <h1><span class="brand-dot"></span>PoolPics</h1>
+      <select class="event-picker" id="eventPicker"></select>
+    </div>
   </div>
 </div>
 
 <!-- Event meta strip -->
 <div class="event-meta" id="eventMeta">
-  <div class="ev-name" id="evName">Loading&hellip;</div>
+  <div class="container">
+    <div class="ev-name" id="evName">Loading&hellip;</div>
+  </div>
 </div>
 
 <!-- Feed -->
-<div class="feed" id="feed">
-  <div class="loading">Loading photos&hellip;</div>
+<div class="container">
+  <div class="feed" id="feed">
+    <div class="loading">Loading photos&hellip;</div>
+  </div>
 </div>
 
 <!-- Floating "Add Photo" button -->
@@ -385,7 +449,7 @@
    user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.2';
+const APP_VERSION = '0.3';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -608,16 +672,18 @@ function renderEventPicker() {
 function renderEventMeta() {
   const wrap = document.getElementById('eventMeta');
   if (!_currentEvent) {
-    wrap.innerHTML = '<div class="ev-name">No event selected</div>';
+    wrap.innerHTML = '<div class="container"><div class="ev-name">No event selected</div></div>';
     return;
   }
   const e = _currentEvent;
   const dates = fmtDateRange(e.start_date, e.end_date);
   wrap.innerHTML =
-    '<div class="ev-name">' + esc(e.name) + '</div>'
+    '<div class="container">'
+    + '<div class="ev-name">' + esc(e.name) + '</div>'
     + '<div class="ev-dates">' + esc(dates) + (e.location ? ' \u00b7 ' + esc(e.location) : '') + '</div>'
     + (e.description ? '<div class="ev-desc">' + esc(e.description) + '</div>' : '')
-    + (!e.posting_open ? '<span class="ev-closed">Posting Closed</span>' : '');
+    + (!e.posting_open ? '<span class="ev-closed">Posting Closed</span>' : '')
+    + '</div>';
 }
 function fmtDateRange(s, e) {
   if (!s) return '';
@@ -672,7 +738,7 @@ function renderFeed() {
   }
   feedEl.innerHTML = _posts.map((p, i) =>
     '<div class="post" onclick="openLightbox(' + i + ')">'
-    + '<img loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt="">'
+    + '<div class="post-img-wrap"><img class="post-img" loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt=""></div>'
     + (p.caption ? '<div class="caption">' + esc(p.caption) + '</div>' : '')
     + '<div class="ts">' + esc(fmtRelative(p.posted_at)) + '</div>'
     + '</div>'
