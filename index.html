@@ -496,7 +496,7 @@
    user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.4';
+const APP_VERSION = '0.5';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -852,12 +852,28 @@ function closePostModal() {
 document.getElementById('addBtn').addEventListener('click', openPostModal);
 
 /* ── Source-chooser sheet (Camera vs Library) ──
- * Two hidden inputs that differ only in the `capture` attribute. The
- * sheet picks one and triggers it. iOS Safari / Android Chrome both
- * honor `capture="environment"` to open the camera and absence to
- * open the photo library. Same change handler runs after either
- * input fires `change`. */
+ * Two hidden inputs that differ only in the `capture` attribute.
+ *
+ * Platform notes:
+ *   - iOS Safari ALWAYS shows its own action sheet (Take Photo /
+ *     Photo Library / Choose File) for a no-capture image input —
+ *     there's no way to suppress it. Showing our custom sheet first
+ *     would mean two consecutive dialogs. So on iOS we skip our sheet
+ *     and just trigger the library input directly; iOS's native sheet
+ *     gives the user the choice.
+ *   - Android's native picker varies wildly by OEM/launcher — sometimes
+ *     it offers a camera+files chooser, sometimes only files. Our
+ *     custom sheet gives deterministic UX on Android.
+ *   - Desktop browsers don't offer a native chooser; our sheet is the
+ *     only way to express "Take Photo" for laptops with webcams.
+ */
+const _isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || '') && !window.MSStream;
+
 function openSourceSheet() {
+  if (_isIOS) {
+    document.getElementById('photoInputLibrary').click();
+    return;
+  }
   document.getElementById('sourceSheet').classList.add('shown');
 }
 function closeSourceSheet() {
