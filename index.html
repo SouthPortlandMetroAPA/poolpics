@@ -23,24 +23,24 @@
   html, body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
   body { padding-bottom: 100px; min-height: 100vh; }
 
-  /* ── Layout container (caps content at 1320px on big monitors so the
-        feed doesn't stretch edge-to-edge and look sparse) ── */
-  .container { max-width: 1320px; margin: 0 auto; padding: 0 16px; }
-  @media (min-width: 1024px) { .container { padding: 0 32px; } }
+  /* ── Layout container (CoastalCritters-style narrow column — keeps the
+        single-column feed feeling like a mobile app even on a desktop
+        monitor; massive negative space on either side is intentional) ── */
+  .container { max-width: 580px; margin: 0 auto; padding: 0 16px; }
 
-  /* ── Header (red→blue gradient, persistent across event switches) ── */
+  /* ── Header (gradient, centered title + event picker stacked) ── */
   .header {
     background: linear-gradient(135deg, var(--spm-primary), var(--spm-accent));
     color: #fff;
-    padding: 14px 0 12px;
+    padding: 18px 0 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     position: sticky; top: 0; z-index: 50;
+    text-align: center;
   }
-  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .header h1 {
-    font-size: clamp(1.4rem, 1rem + 1.5vw, 2rem);
+    font-size: clamp(1.5rem, 1.2rem + 1vw, 1.85rem);
     font-weight: 900; letter-spacing: -0.01em;
-    display: flex; align-items: center; gap: 10px;
+    display: inline-flex; align-items: center; gap: 10px;
   }
   .header h1 .brand-dot {
     display: inline-block; width: 10px; height: 10px;
@@ -48,111 +48,103 @@
     box-shadow: 0 0 0 3px rgba(255,255,255,0.25);
   }
   .event-picker {
+    display: block; margin: 12px auto 0;
     background: rgba(255,255,255,0.15);
     border: 1.5px solid rgba(255,255,255,0.45);
     color: #fff;
     border-radius: var(--pill);
-    padding: 8px 32px 8px 16px;
-    font-size: clamp(0.85rem, 0.7rem + 0.3vw, 1rem);
+    padding: 8px 36px 8px 18px;
+    font-size: 0.92rem;
     font-weight: 700;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path fill="%23fff" d="M1 3l4 4 4-4z"/></svg>');
     background-repeat: no-repeat;
-    background-position: right 10px center;
-    max-width: 60vw;
+    background-position: right 12px center;
+    max-width: 90%;
     text-overflow: ellipsis;
     transition: background 0.15s, border-color 0.15s;
   }
   .event-picker:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.7); }
   .event-picker option { color: #1a1a1a; }
 
-  /* ── Event meta strip ── */
+  /* ── Event meta strip — centered like CoastalCritters' feed-header ── */
   .event-meta {
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
-    padding: 18px 0;
+    padding: 24px 0 16px;
+    text-align: center;
   }
   .event-meta .ev-name {
-    font-size: clamp(1.15rem, 0.95rem + 0.7vw, 1.6rem);
+    font-size: clamp(1.2rem, 1rem + 0.6vw, 1.55rem);
     font-weight: 800; color: var(--spm-accent);
     letter-spacing: -0.01em;
   }
   .event-meta .ev-dates {
-    font-size: clamp(0.78rem, 0.7rem + 0.2vw, 0.92rem);
+    font-size: 0.85rem;
     color: var(--muted); margin-top: 4px; font-weight: 600;
   }
   .event-meta .ev-desc {
-    font-size: clamp(0.88rem, 0.8rem + 0.2vw, 1rem);
-    color: var(--text); margin-top: 8px; line-height: 1.55;
-    max-width: 70ch;
+    font-size: 0.95rem;
+    color: var(--text); margin: 10px auto 0; line-height: 1.55;
+    max-width: 52ch;
   }
   .event-meta .ev-closed {
     display: inline-block;
-    margin-top: 8px;
+    margin-top: 10px;
     padding: 4px 12px;
     border-radius: var(--pill);
     background: rgba(245,158,11,0.15); color: #b45309;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   }
 
-  /* ── Feed (responsive: auto-fill column count by viewport width) ── */
+  /* ── Feed — single column stack, posts at natural aspect ratio ── */
   .feed {
-    padding: 16px 0 24px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 10px;
+    padding: 8px 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
-  @media (min-width: 600px)  { .feed { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; padding: 20px 0 28px; } }
-  @media (min-width: 1024px) { .feed { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; padding: 24px 0 36px; } }
-  @media (min-width: 1440px) { .feed { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; } }
 
   .post {
     background: var(--card);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: box-shadow 0.18s ease;
   }
-  .post:active { transform: scale(0.97); }
-  /* Hover lift only on devices that actually have a hover-capable pointer
-     (desktop with mouse, not touch). Avoids sticky :hover state on tap. */
+  /* Subtle lift on hover-capable devices (desktop pointer); skips touch. */
   @media (hover: hover) {
-    .post:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(0,0,0,0.16); }
-    .post:hover .post-img { transform: scale(1.04); }
+    .post:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
   }
-  .post-img-wrap { width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: #ddd; }
+  .post:active { transform: scale(0.995); }
   .post-img {
-    width: 100%; height: 100%;
-    object-fit: cover;
     display: block;
-    transition: transform 0.4s ease;
+    width: 100%; height: auto;       /* natural aspect ratio */
+    background: #ddd;
   }
   .post .caption {
-    padding: 10px 12px 12px;
-    font-size: 0.86rem;
-    line-height: 1.4;
+    padding: 16px 20px 4px;
+    font-size: 0.95rem;
+    line-height: 1.55;
     color: var(--text);
     word-break: break-word;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    white-space: pre-wrap;
   }
   .post .ts {
-    padding: 0 12px 10px;
-    font-size: 0.7rem;
+    padding: 4px 20px 16px;
+    font-size: 0.75rem;
     color: var(--muted);
     font-weight: 600;
-    letter-spacing: 0.02em;
   }
+  /* When there's no caption, the timestamp hugs the image more closely */
+  .post.no-caption .ts { padding-top: 12px; }
   .empty {
-    grid-column: 1 / -1;
     text-align: center;
-    padding: 80px 20px;
+    padding: 60px 20px;
     color: var(--muted);
-    font-size: clamp(0.9rem, 0.85rem + 0.2vw, 1.05rem);
+    font-size: 1rem;
   }
   .empty .empty-emoji { font-size: 3.5rem; display: block; margin-bottom: 12px; }
 
@@ -496,7 +488,7 @@
    user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.5';
+const APP_VERSION = '0.6';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -737,11 +729,20 @@ function fmtDateRange(s, e) {
   const [sy, sm, sd] = s.split('-').map(Number);
   const [ey, em, ed] = e.split('-').map(Number);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const sStr = months[sm-1] + ' ' + sd;
-  const eStr = (sm === em && sy === ey)
-    ? sd + ' \u2013 ' + ed + ', ' + ey
-    : months[em-1] + ' ' + ed + ', ' + ey;
-  return (sm === em && sy === ey) ? months[sm-1] + ' ' + sd + ' \u2013 ' + ed + ', ' + ey : sStr + ' \u2013 ' + eStr + ', ' + ey;
+  if (!e || sy === ey && sm === em && sd === ed) {
+    // Single day
+    return months[sm-1] + ' ' + sd + ', ' + sy;
+  }
+  if (sy === ey && sm === em) {
+    // Same month + year:  "Apr 26 – 30, 2026"
+    return months[sm-1] + ' ' + sd + ' \u2013 ' + ed + ', ' + sy;
+  }
+  if (sy === ey) {
+    // Same year, cross-month:  "Apr 26 – May 3, 2026"
+    return months[sm-1] + ' ' + sd + ' \u2013 ' + months[em-1] + ' ' + ed + ', ' + sy;
+  }
+  // Cross-year:  "Dec 30, 2025 – Jan 2, 2026"
+  return months[sm-1] + ' ' + sd + ', ' + sy + ' \u2013 ' + months[em-1] + ' ' + ed + ', ' + ey;
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -784,8 +785,8 @@ function renderFeed() {
     return;
   }
   feedEl.innerHTML = _posts.map((p, i) =>
-    '<div class="post" onclick="openLightbox(' + i + ')">'
-    + '<div class="post-img-wrap"><img class="post-img" loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt=""></div>'
+    '<div class="post' + (p.caption ? '' : ' no-caption') + '" onclick="openLightbox(' + i + ')">'
+    + '<img class="post-img" loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt="">'
     + (p.caption ? '<div class="caption">' + esc(p.caption) + '</div>' : '')
     + '<div class="ts">' + esc(fmtRelative(p.posted_at)) + '</div>'
     + '</div>'
