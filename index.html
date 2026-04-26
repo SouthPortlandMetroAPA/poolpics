@@ -245,6 +245,27 @@
   .file-picker img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
   .file-picker .picker-icon { font-size: 2rem; display: block; margin-bottom: 6px; }
   .file-picker input[type="file"] { display: none; }
+
+  /* Source-chooser sheet (Camera / Library) */
+  .source-sheet { max-width: 440px; }
+  .source-options { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 480px) { .source-options { grid-template-columns: 1fr 1fr; } }
+  .source-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 22px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    font-family: inherit;
+  }
+  .source-btn:hover { border-color: var(--spm-accent); background: #f8faff; }
+  .source-btn:active { transform: scale(0.98); }
+  .source-btn .source-icon { font-size: 2rem; }
+  .source-btn .source-label { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .source-btn .source-hint { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
   .form-textarea {
     width: 100%;
     border: 1.5px solid var(--border);
@@ -400,14 +421,19 @@
     <p style="color:var(--muted);font-size:0.82rem;margin-bottom:16px" id="postTargetLabel"></p>
 
     <div class="form-section">
-      <label class="file-picker" id="filePicker">
-        <input type="file" id="photoInput" accept="image/*" capture="environment">
+      <!-- Single drop zone; click opens a source-chooser sheet (camera /
+           library) and routes to the matching hidden input. The two
+           inputs differ ONLY in the `capture` attribute so the OS
+           opens the camera vs the photo picker. -->
+      <div class="file-picker" id="filePicker" role="button" tabindex="0" onclick="openSourceSheet()" onkeydown="if(event.key==='Enter'||event.key===' ')openSourceSheet()">
         <div id="filePickerEmpty">
           <span class="picker-icon">&#128247;</span>
           Tap to choose a photo
         </div>
         <img id="filePreview" class="hidden" alt="preview">
-      </label>
+      </div>
+      <input type="file" id="photoInputCamera"  accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="photoInputLibrary" accept="image/*" style="display:none">
     </div>
 
     <div class="form-section">
@@ -425,6 +451,27 @@
       <button class="btn btn-outline" onclick="closePostModal()">Cancel</button>
       <button class="btn btn-primary" id="submitBtn" onclick="submitPost()">Post</button>
     </div>
+  </div>
+</div>
+
+<!-- Source-chooser sheet (Camera vs Library) -->
+<div class="modal" id="sourceSheet" onclick="if(event.target===this)closeSourceSheet()">
+  <div class="modal-box source-sheet">
+    <div class="modal-title">Add a photo</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:14px">Where should the photo come from?</p>
+    <div class="source-options">
+      <button class="source-btn" onclick="pickFromCamera()">
+        <span class="source-icon">&#128247;</span>
+        <span class="source-label">Take Photo</span>
+        <span class="source-hint">Open the camera</span>
+      </button>
+      <button class="source-btn" onclick="pickFromLibrary()">
+        <span class="source-icon">&#128444;&#65039;</span>
+        <span class="source-label">Choose from Library</span>
+        <span class="source-hint">Pick an existing photo</span>
+      </button>
+    </div>
+    <button class="btn btn-outline" style="width:100%;margin-top:12px" onclick="closeSourceSheet()">Cancel</button>
   </div>
 </div>
 
@@ -449,7 +496,7 @@
    user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.3';
+const APP_VERSION = '0.4';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -786,7 +833,8 @@ function openPostModal() {
   if (_isBanned) return;
   document.getElementById('postTargetLabel').textContent = 'Posting to: ' + _currentEvent.name;
   _selectedFile = null;
-  document.getElementById('photoInput').value = '';
+  document.getElementById('photoInputCamera').value = '';
+  document.getElementById('photoInputLibrary').value = '';
   document.getElementById('captionInput').value = '';
   document.getElementById('consentBox').checked = false;
   document.getElementById('filePreview').classList.add('hidden');
@@ -803,21 +851,43 @@ function closePostModal() {
 
 document.getElementById('addBtn').addEventListener('click', openPostModal);
 
-document.getElementById('photoInput').addEventListener('change', async (ev) => {
-  const f = ev.target.files && ev.target.files[0];
-  if (!f) return;
-  const isHeic = /\.(heic|heif)$/i.test(f.name) || /heic|heif/.test(f.type);
-  let blob = f;
+/* ── Source-chooser sheet (Camera vs Library) ──
+ * Two hidden inputs that differ only in the `capture` attribute. The
+ * sheet picks one and triggers it. iOS Safari / Android Chrome both
+ * honor `capture="environment"` to open the camera and absence to
+ * open the photo library. Same change handler runs after either
+ * input fires `change`. */
+function openSourceSheet() {
+  document.getElementById('sourceSheet').classList.add('shown');
+}
+function closeSourceSheet() {
+  document.getElementById('sourceSheet').classList.remove('shown');
+}
+function pickFromCamera() {
+  closeSourceSheet();
+  // .click() must happen synchronously inside the user-gesture chain;
+  // closing the modal first is fine because the click handler is still
+  // running. The actual file chooser opens after this returns.
+  document.getElementById('photoInputCamera').click();
+}
+function pickFromLibrary() {
+  closeSourceSheet();
+  document.getElementById('photoInputLibrary').click();
+}
+
+async function handlePhotoChosen(file) {
+  if (!file) return;
+  const isHeic = /\.(heic|heif)$/i.test(file.name) || /heic|heif/.test(file.type);
+  let blob = file;
   if (isHeic) {
     showToast('Converting iPhone photo\u2026');
     try {
-      blob = await heicToJpeg(f);
+      blob = await heicToJpeg(file);
     } catch (e) {
       showToast('Could not convert HEIC: ' + e.message, 'err');
       return;
     }
   }
-  // Show preview
   const url = URL.createObjectURL(blob);
   const img = document.getElementById('filePreview');
   img.src = url;
@@ -825,6 +895,13 @@ document.getElementById('photoInput').addEventListener('change', async (ev) => {
   document.getElementById('filePickerEmpty').classList.add('hidden');
   document.getElementById('filePicker').classList.add('has-file');
   _selectedFile = blob;
+}
+
+document.getElementById('photoInputCamera').addEventListener('change', (ev) => {
+  handlePhotoChosen(ev.target.files && ev.target.files[0]);
+});
+document.getElementById('photoInputLibrary').addEventListener('change', (ev) => {
+  handlePhotoChosen(ev.target.files && ev.target.files[0]);
 });
 
 document.getElementById('captionInput').addEventListener('input', (ev) => {
