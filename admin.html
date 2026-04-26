@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapshot Admin</title>
+<style>
+  :root {
+    --spm-primary: #ea002a;
+    --spm-accent:  #0031a1;
+    --bg:          #f3f3f3;
+    --card:        #ffffff;
+    --text:        #1a1a1a;
+    --muted:       #6b7280;
+    --border:      #e5e7eb;
+    --success:     #16a34a;
+    --warn:        #f59e0b;
+    --danger:      #dc2626;
+    --radius:      14px;
+    --pill:        999px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--spm-primary), var(--spm-accent));
+    color: #fff; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative;
+  }
+  .header h1 { font-size: 1.4rem; font-weight: 900; }
+  .header h1 .subpage { font-size: 1rem; font-weight: 500; font-style: italic; opacity: 0.85; margin-left: 10px; }
+  .admin-badge {
+    position: absolute; top: 12px; right: 16px;
+    padding: 4px 12px; border-radius: var(--pill);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    background: rgba(255,255,255,0.18); border: 1.5px solid rgba(255,255,255,0.5); color: #fff;
+  }
+
+  /* Tabs */
+  .tabs { background: #fff; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; padding: 0 16px; gap: 0; }
+  .tab { padding: 12px 18px; border: 0; background: transparent; cursor: pointer; font-size: 0.9rem; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--spm-accent); border-bottom-color: var(--spm-accent); }
+  .panel { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  .card h2 { font-size: 1rem; font-weight: 800; color: var(--spm-accent); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* Forms */
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 8px; }
+  .form-row > div { flex: 1; min-width: 160px; }
+  label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  input[type="text"], input[type="date"], input[type="url"], textarea, select {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-family: inherit; font-size: 0.9rem; background: #fff;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--spm-accent); }
+  textarea { resize: vertical; min-height: 60px; }
+
+  /* Buttons */
+  .btn { padding: 8px 18px; border-radius: var(--pill); font-size: 0.82rem; font-weight: 700; border: 0; cursor: pointer; min-height: 36px; }
+  .btn-primary { background: var(--spm-accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #0046cc; }
+  .btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
+  .btn-outline { background: #fff; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover:not(:disabled) { background: #f5f5f5; border-color: #aaa; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.9; }
+  .btn-warn { background: var(--warn); color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-sm { padding: 4px 10px; font-size: 0.72rem; min-height: 28px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Table */
+  .table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .table th { text-align: left; padding: 10px 8px; border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .table td { padding: 10px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .table tr:hover { background: #fafafa; }
+  .table-wrap { overflow-x: auto; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: var(--pill); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+  .badge.ok { background: rgba(22,163,74,0.12); color: var(--success); }
+  .badge.warn { background: rgba(245,158,11,0.15); color: #b45309; }
+  .badge.danger { background: rgba(220,38,38,0.12); color: var(--danger); }
+  .badge.muted { background: #eee; color: var(--muted); }
+
+  /* Status banner */
+  .status-line { padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; display: none; }
+  .status-line.shown { display: block; }
+  .status-line.ok    { background: rgba(22,163,74,0.10); color: var(--success); }
+  .status-line.err   { background: rgba(220,38,38,0.10); color: var(--danger); }
+  .status-line.progress { background: rgba(0,49,161,0.10); color: var(--spm-accent); }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--card); border-radius: var(--radius); padding: 16px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+  .stat-num { font-size: 2rem; font-weight: 900; color: var(--spm-accent); }
+  .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+
+  /* Feed grid (admin) */
+  .admin-feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .admin-post { background: #fff; border-radius: var(--radius); overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 2px solid transparent; }
+  .admin-post.hidden-post { border-color: var(--warn); opacity: 0.85; }
+  .admin-post.banned { border-color: var(--danger); }
+  .admin-post img { width: 100%; height: 220px; object-fit: cover; display: block; background: #ddd; }
+  .admin-post .meta { padding: 10px 12px; font-size: 0.78rem; color: var(--muted); }
+  .admin-post .caption { padding: 4px 12px; font-size: 0.85rem; color: var(--text); }
+  .admin-post .row { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Key gate */
+  .key-gate { text-align: center; padding: 60px 20px; }
+  .key-gate .card { max-width: 440px; margin: 0 auto; text-align: center; }
+
+  /* Update overlay (auto-update mechanism) */
+  .update-overlay { position: fixed; inset: 0; background: rgba(10,20,40,0.72); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .update-overlay.shown { display: flex; }
+  .update-box { background: #fff; border-radius: var(--radius); padding: 32px; max-width: 380px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .update-spinner { width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 50%; border: 5px solid rgba(0,49,161,0.15); border-top-color: var(--spm-accent); animation: spin 0.85s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .update-title { font-size: 1.1rem; font-weight: 800; color: var(--spm-accent); margin-bottom: 6px; }
+
+  .hidden { display: none !important; }
+  code { background: #eef1f7; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; color: var(--spm-accent); font-weight: 700; }
+  .hint { font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+</style>
+</head>
+<body>
+
+<div class="update-overlay" id="updateOverlay">
+  <div class="update-box">
+    <div class="update-spinner"></div>
+    <div class="update-title">Updating Snapshot Admin</div>
+    <div>A new version is being deployed&hellip;</div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="admin-badge">ADMIN</div>
+  <h1>Snapshot <span class="subpage" id="appSubpage">Events</span></h1>
+</div>
+
+<!-- Key gate -->
+<div id="keyGate" class="key-gate hidden">
+  <div class="card">
+    <h2 id="keyGateTitle">Admin key required</h2>
+    <p class="hint" id="keyGateMsg">Append <code>?key=&lt;service_role&gt;</code> to the URL to enter.</p>
+  </div>
+</div>
+
+<!-- Main UI -->
+<div id="adminMain" class="hidden">
+
+  <div class="tabs">
+    <button class="tab active" data-tab="events">Events</button>
+    <button class="tab" data-tab="feed">Feed</button>
+    <button class="tab" data-tab="bans">Bans</button>
+    <button class="tab" data-tab="stats">Stats</button>
+    <button class="tab" data-tab="download">Download</button>
+  </div>
+
+  <!-- ─── Events tab ─── -->
+  <div class="panel active" id="tab-events">
+    <div class="card">
+      <h2>Create event</h2>
+      <div class="form-row">
+        <div>
+          <label for="evName">Name</label>
+          <input type="text" id="evName" placeholder="Vegas Championships 2026">
+        </div>
+        <div>
+          <label for="evStart">Start date</label>
+          <input type="date" id="evStart">
+        </div>
+        <div>
+          <label for="evEnd">End date</label>
+          <input type="date" id="evEnd">
+        </div>
+      </div>
+      <div class="form-row">
+        <div style="flex: 2">
+          <label for="evLoc">Location</label>
+          <input type="text" id="evLoc" placeholder="Las Vegas, NV">
+        </div>
+        <div style="flex: 3">
+          <label for="evCover">Cover photo URL (optional)</label>
+          <input type="url" id="evCover" placeholder="https://&hellip;">
+        </div>
+      </div>
+      <div class="form-row">
+        <div style="flex: 1">
+          <label for="evDesc">Description (optional)</label>
+          <textarea id="evDesc" placeholder="One or two sentences&hellip;"></textarea>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="createEvent()">Create</button>
+      </div>
+      <div id="evCreateStatus" class="status-line" style="margin-top:10px"></div>
+      <p class="hint" style="margin-top:6px">Slug auto-generated from name.</p>
+    </div>
+
+    <div class="card">
+      <h2>Events</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Slug</th><th>Dates</th><th>Location</th><th>Posts</th><th>Status</th><th></th></tr></thead>
+          <tbody id="evBody"><tr><td colspan="7" class="hint">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Feed tab ─── -->
+  <div class="panel" id="tab-feed">
+    <div class="card">
+      <h2>Feed moderation</h2>
+      <div class="form-row" style="align-items:center">
+        <div style="flex:0 0 240px">
+          <label for="feedEvent">Event</label>
+          <select id="feedEvent" onchange="loadAdminFeed()"></select>
+        </div>
+        <div style="flex:0 0 200px">
+          <label for="feedFilter">Show</label>
+          <select id="feedFilter" onchange="loadAdminFeed()">
+            <option value="all">All posts</option>
+            <option value="visible">Visible only</option>
+            <option value="hidden">Hidden / banned only</option>
+          </select>
+        </div>
+        <div style="flex:0 0 auto">
+          <button class="btn btn-outline btn-sm" onclick="loadAdminFeed()" style="margin-top:18px">Refresh</button>
+        </div>
+      </div>
+      <div id="adminFeedStatus" class="status-line" style="margin-top:12px"></div>
+      <div id="adminFeed" class="admin-feed" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ─── Bans tab ─── -->
+  <div class="panel" id="tab-bans">
+    <div class="card">
+      <h2>Active bans</h2>
+      <p class="hint" style="margin-bottom:10px">A ban inserts up to 3 rows (one per identifier — client_id, ip, canvas_fp). Unban removes all rows for that device. Bans are global across all events.</p>
+      <div id="banListStatus" class="status-line"></div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Identifier type</th><th>Value</th><th>Display label</th><th>Reason</th><th>Banned</th><th></th></tr></thead>
+          <tbody id="banBody"><tr><td colspan="6" class="hint">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Stats tab ─── -->
+  <div class="panel" id="tab-stats">
+    <div class="card">
+      <h2>Stats</h2>
+      <div class="form-row" style="align-items:center;margin-bottom:12px">
+        <div style="flex:0 0 240px">
+          <label for="statsEvent">Scope</label>
+          <select id="statsEvent" onchange="loadStats()"></select>
+        </div>
+        <div style="flex:0 0 auto">
+          <button class="btn btn-outline btn-sm" onclick="loadStats()" style="margin-top:18px">Refresh</button>
+        </div>
+      </div>
+      <div class="stats" id="statsHeader"></div>
+      <h2 style="margin-top:18px">Top devices by load count</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Device (client_id)</th><th>IP</th><th>Loads</th><th>Posts</th><th>First seen</th><th>Last seen</th><th>Banned?</th><th></th></tr></thead>
+          <tbody id="topDevicesBody"><tr><td colspan="8" class="hint">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+      <h2 style="margin-top:18px">Recent loads</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Time</th><th>Event</th><th>Device</th><th>IP</th><th>UA</th></tr></thead>
+          <tbody id="recentLoadsBody"><tr><td colspan="5" class="hint">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Download tab ─── -->
+  <div class="panel" id="tab-download">
+    <div class="card">
+      <h2>Download all photos</h2>
+      <p class="hint" style="margin-bottom:10px">
+        Bundles every visible photo for the chosen event into a single ZIP, alongside a <code>manifest.csv</code>
+        with caption / posted_at / device fingerprint / banned flag. Streamed via JSZip in your browser &mdash; no server roundtrip.
+      </p>
+      <div class="form-row" style="align-items:center">
+        <div style="flex:0 0 320px">
+          <label for="dlEvent">Event</label>
+          <select id="dlEvent"></select>
+        </div>
+        <div style="flex:0 0 auto">
+          <button class="btn btn-primary" id="dlBtn" onclick="downloadEventPhotos()" style="margin-top:18px">Build ZIP</button>
+        </div>
+      </div>
+      <div id="dlStatus" class="status-line" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   APP IDENTITY
+   ════════════════════════════════════════════════════════════════════════ */
+const APP_NAME    = 'Snapshot';
+const APP_VERSION = '0.1';
+
+/* ════════════════════════════════════════════════════════════════════════
+   CONFIG
+   ════════════════════════════════════════════════════════════════════════ */
+const SB_URL  = 'https://dqzbekoaysgaiqljueac.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxemJla29heXNnYWlxbGp1ZWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNzA5NzgsImV4cCI6MjA5MDc0Njk3OH0.cCdGxZ4zEFzU_r6lWSDeoNWG67Q4MSYCAtpds035dfU';
+const STORAGE_BUCKET = 'snapshot';
+const SCHEMA = 'snapshot';
+
+const params = new URLSearchParams(location.search);
+const SB_KEY = params.get('key') || '';
+
+const HEADERS_READ  = SB_KEY
+  ? { apikey: SB_KEY,  Authorization: 'Bearer ' + SB_KEY,  'Accept-Profile': SCHEMA }
+  : { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': SCHEMA };
+const HEADERS_WRITE = { ...HEADERS_READ, 'Content-Type': 'application/json', 'Content-Profile': SCHEMA, Prefer: 'return=representation' };
+const HEADERS_APA   = { apikey: SB_ANON, Authorization: 'Bearer ' + SB_ANON, 'Accept-Profile': 'apa_core' };
+
+/* ════════════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════════════ */
+let _events = [];
+let _versionMismatch = false;
+
+/* ════════════════════════════════════════════════════════════════════════
+   AUTO-UPDATE
+   ════════════════════════════════════════════════════════════════════════ */
+async function checkVersion() {
+  if (_versionMismatch) return;
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/apps?app_name=eq.' + APP_NAME + '&select=version', { headers: HEADERS_APA });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d || !d.length) return;
+    if (d[0].version && d[0].version !== APP_VERSION) {
+      _versionMismatch = true;
+      document.getElementById('updateOverlay').classList.add('shown');
+      pollForDeploy(d[0].version);
+    }
+  } catch (_) {}
+}
+function pollForDeploy(target) {
+  setTimeout(async () => {
+    try {
+      const r = await fetch('admin.html?_=' + Date.now());
+      if (r.ok) {
+        const html = await r.text();
+        if (html.indexOf("APP_VERSION = '" + target + "'") !== -1) {
+          location.reload(true); return;
+        }
+      }
+    } catch (_) {}
+    pollForDeploy(target);
+  }, 3000);
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   sb helper
+   ════════════════════════════════════════════════════════════════════════ */
+async function sb(method, path, body, extra) {
+  const opts = { method, headers: method === 'GET' ? HEADERS_READ : HEADERS_WRITE };
+  if (extra) opts.headers = { ...opts.headers, ...extra };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(SB_URL + '/rest/v1/' + path, opts);
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error('Supabase ' + r.status + ': ' + txt.substring(0, 300));
+  }
+  if (r.status === 204) return null;
+  const ct = r.headers.get('Content-Type') || '';
+  return ct.includes('json') ? r.json() : r.text();
+}
+
+/* Storage helper */
+async function sbStorageDelete(path) {
+  await fetch(SB_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + encodeURIComponent(path), {
+    method: 'DELETE',
+    headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+  });
+}
+function photoUrl(path) {
+  return SB_URL + '/storage/v1/object/public/' + STORAGE_BUCKET + '/' + path;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   TAB SWITCH
+   ════════════════════════════════════════════════════════════════════════ */
+const TAB_LABEL = { events:'Events', feed:'Feed', bans:'Bans', stats:'Stats', download:'Download' };
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  document.getElementById('appSubpage').textContent = TAB_LABEL[name] || '';
+  if (name === 'feed')     loadAdminFeed();
+  if (name === 'bans')     loadBans();
+  if (name === 'stats')    loadStats();
+  if (name === 'download') populateDownloadEvents();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   EVENTS
+   ════════════════════════════════════════════════════════════════════════ */
+function slugify(s) {
+  return String(s || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 60);
+}
+async function loadEvents() {
+  _events = await sb('GET', 'events?select=*&order=start_date.desc');
+  renderEventsTable();
+  // Repopulate selectors that depend on events
+  populateSelector('feedEvent', true);
+  populateSelector('statsEvent', true);
+  populateSelector('dlEvent', false);
+}
+function populateSelector(id, includeAllOption) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const allOpt = includeAllOption ? '<option value="">All events</option>' : '';
+  sel.innerHTML = allOpt + _events.map(e => '<option value="' + e.id + '">' + esc(e.name) + '</option>').join('');
+}
+async function renderEventsTable() {
+  const body = document.getElementById('evBody');
+  if (!_events.length) {
+    body.innerHTML = '<tr><td colspan="7" class="hint">No events yet.</td></tr>';
+    return;
+  }
+  // Fetch post counts per event in one round-trip
+  let counts = {};
+  try {
+    const rows = await sb('GET', 'posts?select=event_id&hidden=eq.false');
+    for (const r of rows) counts[r.event_id] = (counts[r.event_id] || 0) + 1;
+  } catch (_) {}
+  body.innerHTML = _events.map(e => {
+    const dates = e.start_date + ' \u2192 ' + e.end_date;
+    const status = e.posting_open ? '<span class="badge ok">Open</span>' : '<span class="badge warn">Closed</span>';
+    return '<tr>'
+      + '<td><strong>' + esc(e.name) + '</strong></td>'
+      + '<td><code>' + esc(e.slug) + '</code></td>'
+      + '<td>' + esc(dates) + '</td>'
+      + '<td>' + esc(e.location || '') + '</td>'
+      + '<td>' + (counts[e.id] || 0) + '</td>'
+      + '<td>' + status + '</td>'
+      + '<td><button class="btn btn-' + (e.posting_open ? 'warn' : 'success') + ' btn-sm" onclick="toggleEventPosting(' + e.id + ',' + (!e.posting_open) + ')">'
+      + (e.posting_open ? 'Close posting' : 'Open posting') + '</button></td>'
+      + '</tr>';
+  }).join('');
+}
+async function createEvent() {
+  hideStatus('evCreateStatus');
+  const name  = document.getElementById('evName').value.trim();
+  const start = document.getElementById('evStart').value;
+  const end   = document.getElementById('evEnd').value;
+  const loc   = document.getElementById('evLoc').value.trim();
+  const cover = document.getElementById('evCover').value.trim();
+  const desc  = document.getElementById('evDesc').value.trim();
+  if (!name || !start || !end) return setStatus('evCreateStatus', 'Name + start + end are required.', 'err');
+  if (end < start) return setStatus('evCreateStatus', 'End date can\u2019t be before start.', 'err');
+  const slug = slugify(name);
+  if (!slug) return setStatus('evCreateStatus', 'Could not generate slug. Pick a different name.', 'err');
+  try {
+    await sb('POST', 'events', {
+      slug, name, start_date: start, end_date: end,
+      location: loc || null,
+      cover_photo_url: cover || null,
+      description: desc || null,
+      posting_open: true
+    });
+    setStatus('evCreateStatus', 'Created.', 'ok');
+    document.getElementById('evName').value = '';
+    document.getElementById('evStart').value = '';
+    document.getElementById('evEnd').value = '';
+    document.getElementById('evLoc').value = '';
+    document.getElementById('evCover').value = '';
+    document.getElementById('evDesc').value = '';
+    await loadEvents();
+  } catch (e) { setStatus('evCreateStatus', 'Failed: ' + e.message, 'err'); }
+}
+async function toggleEventPosting(id, open) {
+  try {
+    await sb('PATCH', 'events?id=eq.' + id, { posting_open: open });
+    await loadEvents();
+  } catch (e) { alert('Failed: ' + e.message); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   FEED MODERATION
+   ════════════════════════════════════════════════════════════════════════ */
+async function loadAdminFeed() {
+  const evId   = document.getElementById('feedEvent').value;
+  const filter = document.getElementById('feedFilter').value;
+  const wrap = document.getElementById('adminFeed');
+  wrap.innerHTML = '<div class="hint">Loading&hellip;</div>';
+  hideStatus('adminFeedStatus');
+  try {
+    let q = 'posts?select=*&order=posted_at.desc&limit=500';
+    if (evId) q += '&event_id=eq.' + evId;
+    const posts = await sb('GET', q);
+
+    // Pull bans set so we can flag posts whose author is banned
+    const bans = await sb('GET', 'bans?select=identifier_type,identifier_value');
+    const banSet = new Set(bans.map(b => b.identifier_type + ':' + b.identifier_value));
+    const isBanned = p =>
+      banSet.has('client_id:' + (p.client_id || ''))
+      || banSet.has('canvas_fp:' + (p.canvas_fp || ''))
+      || banSet.has('ip:' + (p.ip_address || ''));
+
+    const eventById = Object.fromEntries(_events.map(e => [e.id, e]));
+    const filtered = posts.filter(p => {
+      if (filter === 'visible') return !p.hidden && !isBanned(p);
+      if (filter === 'hidden')  return p.hidden || isBanned(p);
+      return true;
+    });
+    if (!filtered.length) {
+      wrap.innerHTML = '<div class="hint">No posts match this filter.</div>';
+      return;
+    }
+    wrap.innerHTML = filtered.map(p => {
+      const banned = isBanned(p);
+      const ev = eventById[p.event_id];
+      return '<div class="admin-post' + (p.hidden ? ' hidden-post' : '') + (banned ? ' banned' : '') + '">'
+        + '<img loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt="">'
+        + '<div class="meta">'
+          + (ev ? esc(ev.name) + ' \u00b7 ' : '')
+          + esc(fmtDateTime(p.posted_at))
+        + '</div>'
+        + (p.caption ? '<div class="caption">' + esc(p.caption) + '</div>' : '')
+        + '<div class="meta" style="font-size:0.7rem">device: <code>' + esc((p.client_id || '').substring(0, 12)) + '\u2026</code></div>'
+        + '<div class="row">'
+          + (p.hidden
+              ? '<button class="btn btn-success btn-sm" onclick="setHidden(' + p.id + ',false)">Unhide</button>'
+              : '<button class="btn btn-warn btn-sm" onclick="setHidden(' + p.id + ',true)">Hide</button>')
+          + (banned
+              ? '<button class="btn btn-success btn-sm" onclick=\'unbanFromPost(' + JSON.stringify(p.client_id || '') + ',' + JSON.stringify(p.canvas_fp || '') + ',' + JSON.stringify(p.ip_address || '') + ')\'>Unban device</button>'
+              : '<button class="btn btn-danger btn-sm" onclick=\'banFromPost(' + p.id + ',' + JSON.stringify(p.client_id || '') + ',' + JSON.stringify(p.canvas_fp || '') + ',' + JSON.stringify(p.ip_address || '') + ')\'>Ban device</button>')
+          + '<button class="btn btn-outline btn-sm" onclick="deletePost(' + p.id + ',' + JSON.stringify(p.photo_path).replace(/'/g,"&#39;") + ')">Delete</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } catch (e) {
+    wrap.innerHTML = '';
+    setStatus('adminFeedStatus', 'Failed: ' + e.message, 'err');
+  }
+}
+async function setHidden(id, hidden) {
+  await sb('PATCH', 'posts?id=eq.' + id, { hidden });
+  await loadAdminFeed();
+}
+async function deletePost(id, photoPath) {
+  if (!confirm('Delete this post permanently? Photo file will also be removed.')) return;
+  try {
+    await sb('DELETE', 'posts?id=eq.' + id);
+    if (photoPath) await sbStorageDelete(photoPath);
+    await loadAdminFeed();
+  } catch (e) { alert('Delete failed: ' + e.message); }
+}
+async function banFromPost(postId, clientId, canvasFp, ip) {
+  const reason = prompt('Optional reason for the ban:', '');
+  if (reason === null) return;
+  try {
+    const rows = [];
+    if (clientId) rows.push({ identifier_type: 'client_id', identifier_value: clientId, reason: reason || '', display_label: 'device ' + clientId.substring(0, 8) });
+    if (canvasFp) rows.push({ identifier_type: 'canvas_fp', identifier_value: canvasFp, reason: reason || '', display_label: 'fp ' + canvasFp.substring(0, 8) });
+    if (ip)       rows.push({ identifier_type: 'ip',        identifier_value: ip,       reason: reason || '', display_label: 'ip ' + ip });
+    if (!rows.length) return alert('No identifiers on this post to ban.');
+    await sb('POST', 'bans', rows, { Prefer: 'resolution=merge-duplicates,return=minimal' });
+    await loadAdminFeed();
+  } catch (e) { alert('Ban failed: ' + e.message); }
+}
+async function unbanFromPost(clientId, canvasFp, ip) {
+  if (!confirm('Unban this device? Their posts will become visible again.')) return;
+  const ors = [];
+  if (clientId) ors.push('and(identifier_type.eq.client_id,identifier_value.eq.' + encodeURIComponent(clientId) + ')');
+  if (canvasFp) ors.push('and(identifier_type.eq.canvas_fp,identifier_value.eq.' + encodeURIComponent(canvasFp) + ')');
+  if (ip)       ors.push('and(identifier_type.eq.ip,identifier_value.eq.' + encodeURIComponent(ip) + ')');
+  if (!ors.length) return;
+  try {
+    await sb('DELETE', 'bans?or=(' + ors.join(',') + ')');
+    await loadAdminFeed();
+  } catch (e) { alert('Unban failed: ' + e.message); }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   BANS LIST
+   ════════════════════════════════════════════════════════════════════════ */
+async function loadBans() {
+  const body = document.getElementById('banBody');
+  body.innerHTML = '<tr><td colspan="6" class="hint">Loading&hellip;</td></tr>';
+  try {
+    const rows = await sb('GET', 'bans?select=*&order=banned_at.desc');
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="hint">No active bans.</td></tr>'; return; }
+    body.innerHTML = rows.map(b => '<tr>'
+      + '<td>' + esc(b.identifier_type) + '</td>'
+      + '<td><code>' + esc(b.identifier_value) + '</code></td>'
+      + '<td>' + esc(b.display_label || '') + '</td>'
+      + '<td>' + esc(b.reason || '') + '</td>'
+      + '<td>' + esc(fmtDateTime(b.banned_at)) + '</td>'
+      + '<td><button class="btn btn-outline btn-sm" onclick="unbanRow(' + b.id + ')">Unban</button></td>'
+      + '</tr>').join('');
+  } catch (e) { body.innerHTML = '<tr><td colspan="6" class="hint">Failed: ' + esc(e.message) + '</td></tr>'; }
+}
+async function unbanRow(id) {
+  if (!confirm('Remove this ban row?')) return;
+  await sb('DELETE', 'bans?id=eq.' + id);
+  await loadBans();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   STATS
+   Server-side aggregation isn't trivial via PostgREST so we pull rows
+   client-side and reduce. Bounded by limit=10000 — fine for this scale.
+   ════════════════════════════════════════════════════════════════════════ */
+async function loadStats() {
+  const evId = document.getElementById('statsEvent').value;
+  const scope = evId ? '?event_id=eq.' + evId : '';
+  const headEl = document.getElementById('statsHeader');
+  headEl.innerHTML = '<div class="hint" style="grid-column:1/-1">Loading&hellip;</div>';
+  try {
+    // Page loads (count via Content-Range header)
+    const loadCountResp = await fetch(SB_URL + '/rest/v1/page_loads' + (scope ? scope.replace('?', '?select=id&') : '?select=id') + (scope ? '' : '') + '&limit=1', {
+      headers: { ...HEADERS_READ, Prefer: 'count=exact' }
+    });
+    const loadCount = parseRangeCount(loadCountResp);
+
+    // Posts (count visible + count hidden)
+    const postCountResp = await fetch(SB_URL + '/rest/v1/posts' + (scope ? scope.replace('?', '?select=id&') : '?select=id') + '&hidden=eq.false&limit=1', {
+      headers: { ...HEADERS_READ, Prefer: 'count=exact' }
+    });
+    const postCount = parseRangeCount(postCountResp);
+
+    const hiddenCountResp = await fetch(SB_URL + '/rest/v1/posts' + (scope ? scope.replace('?', '?select=id&') : '?select=id') + '&hidden=eq.true&limit=1', {
+      headers: { ...HEADERS_READ, Prefer: 'count=exact' }
+    });
+    const hiddenCount = parseRangeCount(hiddenCountResp);
+
+    // Pull all loads to compute unique devices + top-N
+    const allLoads = await sb('GET',
+      'page_loads?select=client_id,ip_address,user_agent,event_id,loaded_at'
+      + (scope ? '&event_id=eq.' + evId : '')
+      + '&order=loaded_at.desc&limit=10000');
+    const byDevice = new Map();
+    for (const l of allLoads) {
+      if (!l.client_id) continue;
+      const v = byDevice.get(l.client_id) || { client_id: l.client_id, ip: l.ip_address, ua: l.user_agent, loads: 0, first: l.loaded_at, last: l.loaded_at, posts: 0, banned: false };
+      v.loads++;
+      if (l.loaded_at < v.first) v.first = l.loaded_at;
+      if (l.loaded_at > v.last)  v.last  = l.loaded_at;
+      byDevice.set(l.client_id, v);
+    }
+
+    // Posts per device
+    const allPosts = await sb('GET', 'posts?select=client_id' + (scope ? '&event_id=eq.' + evId : ''));
+    for (const p of allPosts) {
+      if (!p.client_id) continue;
+      const v = byDevice.get(p.client_id);
+      if (v) v.posts++;
+    }
+
+    // Bans set
+    const bans = await sb('GET', 'bans?select=identifier_type,identifier_value');
+    const banSet = new Set(bans.map(b => b.identifier_type + ':' + b.identifier_value));
+    for (const v of byDevice.values()) {
+      v.banned = banSet.has('client_id:' + v.client_id);
+    }
+
+    headEl.innerHTML =
+      _stat(loadCount, 'Page loads')
+      + _stat(byDevice.size, 'Unique devices')
+      + _stat(postCount, 'Posts (visible)')
+      + _stat(hiddenCount, 'Posts (hidden / banned)');
+
+    // Top devices table
+    const top = [...byDevice.values()].sort((a, b) => b.loads - a.loads).slice(0, 50);
+    document.getElementById('topDevicesBody').innerHTML = top.map(v => '<tr>'
+      + '<td><code>' + esc((v.client_id || '').substring(0, 14)) + '\u2026</code></td>'
+      + '<td>' + esc(v.ip || '') + '</td>'
+      + '<td>' + v.loads + '</td>'
+      + '<td>' + v.posts + '</td>'
+      + '<td>' + esc(fmtDateTime(v.first)) + '</td>'
+      + '<td>' + esc(fmtDateTime(v.last)) + '</td>'
+      + '<td>' + (v.banned ? '<span class="badge danger">Banned</span>' : '<span class="badge ok">No</span>') + '</td>'
+      + '<td>' + (v.banned
+          ? '<button class="btn btn-success btn-sm" onclick="unbanByClientId(' + JSON.stringify(v.client_id) + ')">Unban</button>'
+          : '<button class="btn btn-danger btn-sm" onclick="banByClientId(' + JSON.stringify(v.client_id) + ',' + JSON.stringify(v.ip || '') + ')">Ban</button>')
+      + '</td>'
+      + '</tr>').join('') || '<tr><td colspan="8" class="hint">No devices.</td></tr>';
+
+    // Recent loads
+    const recent = allLoads.slice(0, 100);
+    const eventById = Object.fromEntries(_events.map(e => [e.id, e]));
+    document.getElementById('recentLoadsBody').innerHTML = recent.map(l => '<tr>'
+      + '<td>' + esc(fmtDateTime(l.loaded_at)) + '</td>'
+      + '<td>' + esc((eventById[l.event_id] && eventById[l.event_id].name) || (l.event_id ? '#' + l.event_id : '\u2014')) + '</td>'
+      + '<td><code>' + esc((l.client_id || '').substring(0, 10)) + '\u2026</code></td>'
+      + '<td>' + esc(l.ip_address || '') + '</td>'
+      + '<td style="font-size:0.7rem;color:var(--muted)">' + esc((l.user_agent || '').substring(0, 60)) + '</td>'
+      + '</tr>').join('') || '<tr><td colspan="5" class="hint">No loads.</td></tr>';
+  } catch (e) {
+    headEl.innerHTML = '<div class="hint" style="grid-column:1/-1;color:var(--danger)">Failed: ' + esc(e.message) + '</div>';
+  }
+}
+function _stat(n, label) {
+  return '<div class="stat"><div class="stat-num">' + n + '</div><div class="stat-label">' + esc(label) + '</div></div>';
+}
+function parseRangeCount(resp) {
+  const cr = resp.headers.get('Content-Range') || '';
+  const m = cr.match(/\/(\d+)$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+async function banByClientId(clientId, ip) {
+  if (!confirm('Ban device ' + clientId.substring(0, 12) + '?')) return;
+  const rows = [{ identifier_type: 'client_id', identifier_value: clientId, reason: '', display_label: 'device ' + clientId.substring(0, 8) }];
+  if (ip) rows.push({ identifier_type: 'ip', identifier_value: ip, reason: '', display_label: 'ip ' + ip });
+  await sb('POST', 'bans', rows, { Prefer: 'resolution=merge-duplicates,return=minimal' });
+  await loadStats();
+}
+async function unbanByClientId(clientId) {
+  if (!confirm('Unban device ' + clientId.substring(0, 12) + '?')) return;
+  await sb('DELETE', 'bans?identifier_type=eq.client_id&identifier_value=eq.' + encodeURIComponent(clientId));
+  await loadStats();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   DOWNLOAD
+   ════════════════════════════════════════════════════════════════════════ */
+let _jszipPromise = null;
+function loadJSZip() {
+  if (_jszipPromise) return _jszipPromise;
+  _jszipPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error('Failed to load JSZip'));
+    document.head.appendChild(s);
+  });
+  return _jszipPromise;
+}
+function populateDownloadEvents() {
+  const sel = document.getElementById('dlEvent');
+  if (sel) sel.innerHTML = _events.map(e => '<option value="' + e.id + '">' + esc(e.name) + '</option>').join('');
+}
+async function downloadEventPhotos() {
+  const evId = parseInt(document.getElementById('dlEvent').value, 10);
+  if (!evId) return;
+  const ev = _events.find(e => e.id === evId);
+  if (!ev) return;
+  const status = document.getElementById('dlStatus');
+  const btn = document.getElementById('dlBtn');
+  btn.disabled = true;
+  setStatus('dlStatus', 'Loading post list\u2026', 'progress');
+  try {
+    const JSZip = await loadJSZip();
+    const posts = await sb('GET', 'posts?event_id=eq.' + evId + '&select=id,photo_path,caption,posted_at,client_id,canvas_fp,ip_address,hidden&order=posted_at.asc&limit=2000');
+    if (!posts.length) {
+      setStatus('dlStatus', 'No posts to download.', 'err'); btn.disabled = false; return;
+    }
+    // Bans set so manifest can flag banned authors
+    const bans = await sb('GET', 'bans?select=identifier_type,identifier_value');
+    const banSet = new Set(bans.map(b => b.identifier_type + ':' + b.identifier_value));
+    const isBanned = p =>
+      banSet.has('client_id:' + (p.client_id || ''))
+      || banSet.has('canvas_fp:' + (p.canvas_fp || ''))
+      || banSet.has('ip:' + (p.ip_address || ''));
+
+    const zip = new JSZip();
+    // CSV manifest
+    const csvLines = ['filename,posted_at,caption,hidden,banned,device_client_id,canvas_fp,ip_address'];
+    let i = 0;
+    for (const p of posts) {
+      i++;
+      setStatus('dlStatus', 'Fetching photo ' + i + ' / ' + posts.length + '\u2026', 'progress');
+      try {
+        const res = await fetch(photoUrl(p.photo_path));
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        // Folder per event-slug; filename is post id padded for sortability
+        const fn = String(p.id).padStart(6, '0') + '.jpg';
+        zip.file(ev.slug + '/' + fn, blob);
+        csvLines.push([
+          ev.slug + '/' + fn,
+          p.posted_at,
+          csvEscape(p.caption || ''),
+          p.hidden ? 'true' : 'false',
+          isBanned(p) ? 'true' : 'false',
+          p.client_id || '',
+          p.canvas_fp || '',
+          p.ip_address || ''
+        ].join(','));
+      } catch (_) { /* skip individual failures */ }
+    }
+    zip.file(ev.slug + '/manifest.csv', csvLines.join('\n'));
+    setStatus('dlStatus', 'Building ZIP\u2026', 'progress');
+    const blob = await zip.generateAsync({ type: 'blob' }, (meta) => {
+      setStatus('dlStatus', 'Compressing\u2026 ' + Math.round(meta.percent) + '%', 'progress');
+    });
+    // Trigger download
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ev.slug + '-photos.zip';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    setStatus('dlStatus', 'Done. Downloaded ' + posts.length + ' photo(s).', 'ok');
+  } catch (e) {
+    setStatus('dlStatus', 'Failed: ' + e.message, 'err');
+  } finally { btn.disabled = false; }
+}
+function csvEscape(s) {
+  s = String(s == null ? '' : s);
+  if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ════════════════════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function fmtDateTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+function setStatus(id, msg, kind) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-line shown ' + (kind || '');
+  el.innerHTML = msg;
+}
+function hideStatus(id) {
+  const el = document.getElementById(id);
+  if (el) { el.className = 'status-line'; el.innerHTML = ''; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════════════════ */
+async function init() {
+  document.title = 'Snapshot Admin';
+  checkVersion();
+  setInterval(checkVersion, 30000);
+
+  if (!SB_KEY) {
+    document.getElementById('keyGate').classList.remove('hidden');
+    return;
+  }
+  // Validate the key by hitting a trivial endpoint
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/events?select=id&limit=1', { headers: HEADERS_READ });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    const g = document.getElementById('keyGate');
+    g.classList.remove('hidden');
+    document.getElementById('keyGateTitle').textContent = 'Access denied';
+    document.getElementById('keyGateMsg').innerHTML = '<strong style="color:var(--danger)">Admin key invalid or expired.</strong><br>Double-check <code>?key=</code>.';
+    return;
+  }
+  document.getElementById('adminMain').classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  await loadEvents();
+  switchTab('events');
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
