@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Snapshot</title>
+<title>PoolPics</title>
 <meta name="description" content="Share photos from APA events">
 <style>
   :root {
@@ -297,7 +297,7 @@
 <div class="update-overlay" id="updateOverlay">
   <div class="update-box">
     <div class="update-spinner"></div>
-    <div class="update-title">Updating Snapshot</div>
+    <div class="update-title">Updating PoolPics</div>
     <div class="update-sub">A new version is being deployed. This page will reload automatically&hellip;</div>
   </div>
 </div>
@@ -305,7 +305,7 @@
 <!-- Header -->
 <div class="header">
   <div class="header-row">
-    <h1>Snapshot</h1>
+    <h1>PoolPics</h1>
     <select class="event-picker" id="eventPicker"></select>
   </div>
 </div>
@@ -379,9 +379,13 @@
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    APP IDENTITY (single source of truth — change here to rebrand)
+   Internal identifiers (snapshot schema, snapshot Storage bucket,
+   `snapshot.client_id` localStorage key, `snapshot` repo name) keep
+   their original "snapshot" name to avoid pointless migrations — only
+   user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
-const APP_NAME    = 'Snapshot';
-const APP_VERSION = '0.1';
+const APP_NAME    = 'PoolPics';
+const APP_VERSION = '0.2';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -446,7 +450,10 @@ function _computeCanvasFp() {
     ctx.fillStyle = '#f60';
     ctx.fillRect(0, 0, 240, 60);
     ctx.fillStyle = '#069';
-    ctx.fillText(APP_NAME + ' \u26a1 fp', 2, 4);
+    // Stable fingerprint string — independent of APP_NAME so a rebrand
+    // doesn't invalidate every device's existing canvas_fp (and break any
+    // bans keyed on it).
+    ctx.fillText('apa-snapshot \u26a1 fp', 2, 4);
     ctx.fillStyle = 'rgba(102,204,0,0.7)';
     ctx.fillText('the quick brown fox', 4, 24);
     return _hash32(c.toDataURL());

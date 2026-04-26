@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Snapshot Admin</title>
+<title>PoolPics Admin</title>
 <style>
   :root {
     --spm-primary: #ea002a;
@@ -131,14 +131,14 @@
 <div class="update-overlay" id="updateOverlay">
   <div class="update-box">
     <div class="update-spinner"></div>
-    <div class="update-title">Updating Snapshot Admin</div>
+    <div class="update-title">Updating PoolPics Admin</div>
     <div>A new version is being deployed&hellip;</div>
   </div>
 </div>
 
 <div class="header">
   <div class="admin-badge">ADMIN</div>
-  <h1>Snapshot <span class="subpage" id="appSubpage">Events</span></h1>
+  <h1>PoolPics <span class="subpage" id="appSubpage">Events</span></h1>
 </div>
 
 <!-- Key gate -->
@@ -311,8 +311,8 @@
 /* ════════════════════════════════════════════════════════════════════════
    APP IDENTITY
    ════════════════════════════════════════════════════════════════════════ */
-const APP_NAME    = 'Snapshot';
-const APP_VERSION = '0.1';
+const APP_NAME    = 'PoolPics';
+const APP_VERSION = '0.2';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG
@@ -851,7 +851,7 @@ function hideStatus(id) {
    INIT
    ════════════════════════════════════════════════════════════════════════ */
 async function init() {
-  document.title = 'Snapshot Admin';
+  document.title = 'PoolPics Admin';
   checkVersion();
   setInterval(checkVersion, 30000);
 
