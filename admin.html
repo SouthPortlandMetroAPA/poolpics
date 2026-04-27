@@ -546,7 +546,7 @@ async function loadAdminFeed() {
           + (banned
               ? '<button class="btn btn-success btn-sm" onclick=\'unbanFromPost(' + JSON.stringify(p.client_id || '') + ',' + JSON.stringify(p.canvas_fp || '') + ',' + JSON.stringify(p.ip_address || '') + ')\'>Unban device</button>'
               : '<button class="btn btn-danger btn-sm" onclick=\'banFromPost(' + p.id + ',' + JSON.stringify(p.client_id || '') + ',' + JSON.stringify(p.canvas_fp || '') + ',' + JSON.stringify(p.ip_address || '') + ')\'>Ban device</button>')
-          + '<button class="btn btn-outline btn-sm" onclick="deletePost(' + p.id + ',' + JSON.stringify(p.photo_path).replace(/'/g,"&#39;") + ')">Delete</button>'
+          + '<button class="btn btn-outline btn-sm" onclick=\'deletePost(' + p.id + ',' + JSON.stringify(p.photo_path) + ')\'>Delete</button>'
         + '</div>'
         + '</div>';
     }).join('');
