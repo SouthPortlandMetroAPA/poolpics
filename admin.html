@@ -195,7 +195,7 @@
         </div>
       </div>
       <div class="actions" style="margin-top:10px">
-        <button class="btn btn-primary" onclick="createEvent()">Create</button>
+        <button class="btn btn-primary" onclick="doCreateEvent()">Create</button>
       </div>
       <div id="evCreateStatus" class="status-line" style="margin-top:10px"></div>
       <p class="hint" style="margin-top:6px">Slug auto-generated from name.</p>
@@ -312,7 +312,7 @@
    APP IDENTITY
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.7';
+const APP_VERSION = '0.8';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG
@@ -459,7 +459,10 @@ async function renderEventsTable() {
       + '</tr>';
   }).join('');
 }
-async function createEvent() {
+// NOTE: must NOT be named createEvent() — that name shadows the built-in
+// document.createEvent DOM method when invoked from an inline onclick handler
+// (the handler scope chain includes document), causing a silent throw.
+async function doCreateEvent() {
   hideStatus('evCreateStatus');
   const name  = document.getElementById('evName').value.trim();
   const start = document.getElementById('evStart').value;
