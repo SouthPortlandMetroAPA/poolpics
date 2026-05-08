@@ -488,7 +488,10 @@
    user-visible branding changes when you rename the app.
    ════════════════════════════════════════════════════════════════════════ */
 const APP_NAME    = 'PoolPics';
-const APP_VERSION = '0.7';
+// NOTE: keep this in lock-step with admin.html's APP_VERSION. Both polls
+// the same apa_core.apps row, so bumping one without the other strands
+// the un-bumped page in the auto-update overlay forever.
+const APP_VERSION = '0.8';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -679,6 +682,12 @@ async function loadEvents() {
   _events = await r.json();
 }
 function pickInitialEvent() {
+  // ?event=<slug> deep link wins over auto-pick when the slug matches.
+  const reqSlug = new URLSearchParams(location.search).get('event');
+  if (reqSlug) {
+    const match = _events.find(e => e.slug === reqSlug);
+    if (match) return match;
+  }
   // Most recent open event whose date range covers today; else most recent
   // ever created.
   const today = new Date().toISOString().substring(0, 10);
@@ -750,6 +759,14 @@ function fmtDateRange(s, e) {
    ════════════════════════════════════════════════════════════════════════ */
 async function selectEvent(e) {
   _currentEvent = e;
+  // Reflect the active event in the URL so the page is shareable /
+  // bookmarkable: ?event=<slug>. replaceState so the back button doesn't
+  // accumulate every picker change.
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set('event', e.slug);
+    history.replaceState(null, '', url);
+  } catch (_) { /* no-op on browsers without history API */ }
   renderEventMeta();
   renderEventPicker();   // re-render to update selected state
   // Toggle Add button based on posting_open
