@@ -307,7 +307,14 @@
 
 </div>
 
-<script src="version.js"></script>
+<script>
+// Cache-bust version.js on every page load so a deployed bump isn't
+// shadowed by the browser's disk-cache copy (Cache-Control: max-age=600
+// from GitHub Pages). document.write is safe here — we're still in
+// initial parsing, the injected <script> executes synchronously before
+// the next inline script runs, and there is no async/defer.
+document.write('<script src="version.js?_=' + Date.now() + '"><\/script>');
+</script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    APP IDENTITY
