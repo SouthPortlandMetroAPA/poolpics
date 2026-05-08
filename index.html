@@ -479,6 +479,7 @@
   </div>
 </div>
 
+<script src="version.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════════
    APP IDENTITY (single source of truth — change here to rebrand)
@@ -486,12 +487,11 @@
    `snapshot.client_id` localStorage key, `snapshot` repo name) keep
    their original "snapshot" name to avoid pointless migrations — only
    user-visible branding changes when you rename the app.
+
+   APP_VERSION lives in version.js as window.APP_VERSION — single source
+   of truth shared with admin.html. Do NOT redefine it here.
    ════════════════════════════════════════════════════════════════════════ */
-const APP_NAME    = 'PoolPics';
-// NOTE: keep this in lock-step with admin.html's APP_VERSION. Both polls
-// the same apa_core.apps row, so bumping one without the other strands
-// the un-bumped page in the auto-update overlay forever.
-const APP_VERSION = '0.8';
+const APP_NAME = 'PoolPics';
 
 /* ════════════════════════════════════════════════════════════════════════
    CONFIG — Supabase (consolidated spm-apa project, snapshot schema)
@@ -603,7 +603,7 @@ async function checkVersion() {
     if (!r.ok) return;
     const d = await r.json();
     if (!d || !d.length) return;
-    if (d[0].version && d[0].version !== APP_VERSION) {
+    if (d[0].version && d[0].version !== window.APP_VERSION) {
       _versionMismatch = true;
       document.getElementById('updateOverlay').classList.add('shown');
       pollForDeploy(d[0].version);
@@ -613,10 +613,11 @@ async function checkVersion() {
 function pollForDeploy(target) {
   setTimeout(async () => {
     try {
-      const r = await fetch('index.html?_=' + Date.now());
+      // Polls version.js — the single source — not this HTML file.
+      const r = await fetch('version.js?_=' + Date.now());
       if (r.ok) {
-        const html = await r.text();
-        if (html.indexOf("APP_VERSION = '" + target + "'") !== -1) {
+        const text = await r.text();
+        if (text.indexOf("APP_VERSION = '" + target + "'") !== -1) {
           location.reload(true);
           return;
         }
