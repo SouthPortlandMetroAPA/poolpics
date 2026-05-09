@@ -17,4 +17,4 @@
    the whole point of this file is that there is exactly one source of
    truth. See feedback_admin_public_version_lockstep.md.
    ════════════════════════════════════════════════════════════════════════ */
-window.APP_VERSION = '0.9';
+window.APP_VERSION = '1.0';

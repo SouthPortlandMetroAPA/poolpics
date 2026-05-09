@@ -117,6 +117,13 @@
   .update-overlay { position: fixed; inset: 0; background: rgba(10,20,40,0.72); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 24px; }
   .update-overlay.shown { display: flex; }
   .update-box { background: #fff; border-radius: var(--radius); padding: 32px; max-width: 380px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+
+  /* Generic edit modal */
+  .modal { position: fixed; inset: 0; background: rgba(10,20,40,0.6); z-index: 200; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal.shown { display: flex; }
+  .modal-box { background: #fff; border-radius: var(--radius); max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .modal-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 14px; color: var(--spm-accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
   .update-spinner { width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 50%; border: 5px solid rgba(0,49,161,0.15); border-top-color: var(--spm-accent); animation: spin 0.85s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .update-title { font-size: 1.1rem; font-weight: 800; color: var(--spm-accent); margin-bottom: 6px; }
@@ -133,6 +140,38 @@
     <div class="update-spinner"></div>
     <div class="update-title">Updating PoolPics Admin</div>
     <div>A new version is being deployed&hellip;</div>
+  </div>
+</div>
+
+<!-- Edit-event modal -->
+<div class="modal" id="editEventModal" onclick="if(event.target===this)closeEditEvent()">
+  <div class="modal-box">
+    <div class="modal-title">Edit event</div>
+    <div class="form-row">
+      <div style="flex:2"><label for="eeName">Name</label><input type="text" id="eeName"></div>
+      <div style="flex:1"><label for="eeSlug">Slug</label><input type="text" id="eeSlug" placeholder="vegas-2026"></div>
+    </div>
+    <div class="form-row">
+      <div><label for="eeStart">Start date</label><input type="date" id="eeStart"></div>
+      <div><label for="eeEnd">End date</label><input type="date" id="eeEnd"></div>
+    </div>
+    <div class="form-row">
+      <div style="flex:2"><label for="eeLoc">Location</label><input type="text" id="eeLoc"></div>
+      <div style="flex:3"><label for="eeCover">Cover photo URL</label><input type="url" id="eeCover" placeholder="https://&hellip;"></div>
+    </div>
+    <div class="form-row">
+      <div style="flex:1"><label for="eeDesc">Description</label><textarea id="eeDesc"></textarea></div>
+    </div>
+    <label style="display:inline-flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text);font-weight:600;cursor:pointer;margin-top:4px">
+      <input type="checkbox" id="eeOpen" style="width:18px;height:18px;cursor:pointer">
+      Posting open
+    </label>
+    <div id="eeStatus" class="status-line" style="margin-top:10px"></div>
+    <p class="hint" style="margin-top:8px">Changing the slug only updates the deep-link URL (<code>?event=&lt;slug&gt;</code>). Existing photo URLs keep working — they’re stored at upload time and don’t depend on the current slug.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEditEvent()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditedEvent()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -464,10 +503,78 @@ async function renderEventsTable() {
       + '<td>' + esc(e.location || '') + '</td>'
       + '<td>' + (counts[e.id] || 0) + '</td>'
       + '<td>' + status + '</td>'
-      + '<td><button class="btn btn-' + (e.posting_open ? 'warn' : 'success') + ' btn-sm" onclick="toggleEventPosting(' + e.id + ',' + (!e.posting_open) + ')">'
-      + (e.posting_open ? 'Close posting' : 'Open posting') + '</button></td>'
+      + '<td style="white-space:nowrap">'
+      +   '<button class="btn btn-outline btn-sm" onclick="openEditEvent(' + e.id + ')" style="margin-right:4px">Edit</button>'
+      +   '<button class="btn btn-' + (e.posting_open ? 'warn' : 'success') + ' btn-sm" onclick="toggleEventPosting(' + e.id + ',' + (!e.posting_open) + ')">'
+      +     (e.posting_open ? 'Close posting' : 'Open posting') + '</button>'
+      + '</td>'
       + '</tr>';
   }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   EDIT EVENT — modal with all fields editable, including the slug.
+   Note on slug renames: post photo_paths are stored in DB at upload time
+   as "<slug-at-upload>/<file>", so existing photos still resolve from
+   their original folder after a slug change. New photos uploaded post-
+   rename go into a new <new-slug>/ folder under the same Storage bucket.
+   The deep-link URL (?event=<slug>) updates immediately.
+   ════════════════════════════════════════════════════════════════════════ */
+let _editEventId = null;
+
+function openEditEvent(id) {
+  const e = _events.find(x => x.id === id);
+  if (!e) return;
+  _editEventId = id;
+  document.getElementById('eeName').value  = e.name || '';
+  document.getElementById('eeSlug').value  = e.slug || '';
+  document.getElementById('eeStart').value = e.start_date || '';
+  document.getElementById('eeEnd').value   = e.end_date || '';
+  document.getElementById('eeLoc').value   = e.location || '';
+  document.getElementById('eeCover').value = e.cover_photo_url || '';
+  document.getElementById('eeDesc').value  = e.description || '';
+  document.getElementById('eeOpen').checked = !!e.posting_open;
+  hideStatus('eeStatus');
+  document.getElementById('editEventModal').classList.add('shown');
+}
+function closeEditEvent() {
+  document.getElementById('editEventModal').classList.remove('shown');
+  _editEventId = null;
+}
+async function saveEditedEvent() {
+  if (_editEventId == null) return;
+  hideStatus('eeStatus');
+  const name  = document.getElementById('eeName').value.trim();
+  const slug  = document.getElementById('eeSlug').value.trim();
+  const start = document.getElementById('eeStart').value;
+  const end   = document.getElementById('eeEnd').value;
+  const loc   = document.getElementById('eeLoc').value.trim();
+  const cover = document.getElementById('eeCover').value.trim();
+  const desc  = document.getElementById('eeDesc').value.trim();
+  const open  = document.getElementById('eeOpen').checked;
+  if (!name || !slug || !start || !end) return setStatus('eeStatus', 'Name, slug, start, and end are required.', 'err');
+  if (end < start) return setStatus('eeStatus', 'End date can’t be before start.', 'err');
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return setStatus('eeStatus', 'Slug must be lowercase letters, digits, hyphens (e.g. vegas-2026).', 'err');
+  try {
+    await sb('PATCH', 'events?id=eq.' + _editEventId, {
+      name, slug, start_date: start, end_date: end,
+      location: loc || null,
+      cover_photo_url: cover || null,
+      description: desc || null,
+      posting_open: open
+    });
+    setStatus('eeStatus', 'Saved.', 'ok');
+    await loadEvents();
+    setTimeout(closeEditEvent, 600);
+  } catch (e) {
+    // PostgREST returns 23505 / "duplicate key value" when the slug clashes
+    const msg = String(e.message || '').toLowerCase();
+    if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('23505')) {
+      setStatus('eeStatus', 'That slug is already used by another event.', 'err');
+    } else {
+      setStatus('eeStatus', 'Save failed: ' + e.message, 'err');
+    }
+  }
 }
 // NOTE: must NOT be named createEvent() — that name shadows the built-in
 // document.createEvent DOM method when invoked from an inline onclick handler
