@@ -276,10 +276,49 @@
     color: var(--muted);
     font-size: 0.9rem;
   }
-  .file-picker.has-file { border-style: solid; border-color: var(--success); color: var(--text); padding: 0; overflow: hidden; }
-  .file-picker img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+  .file-picker.has-file { border-style: solid; border-color: var(--success); color: var(--text); padding: 12px; overflow: hidden; text-align: left; }
   .file-picker .picker-icon { font-size: 2rem; display: block; margin-bottom: 6px; }
   .file-picker input[type="file"] { display: none; }
+  /* Thumbnail grid (multi-photo selection preview) */
+  .thumb-grid {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 8px;
+  }
+  .file-picker.has-file .thumb-grid { display: grid; }
+  .file-picker.has-file #filePickerEmpty { display: none; }
+  .thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ddd;
+  }
+  .thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb-remove {
+    position: absolute; top: 4px; right: 4px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.72);
+    color: #fff; border: 0;
+    font-size: 18px; font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+  }
+  .thumb-remove:hover { background: var(--spm-primary); }
+  .add-more-hint {
+    display: none;
+    margin-top: 10px;
+    font-size: 0.75rem; color: var(--muted);
+    text-align: center;
+  }
+  .file-picker.has-file .add-more-hint { display: block; }
 
   /* Source-chooser sheet (Camera / Library) */
   .source-sheet { max-width: 440px; }
@@ -453,7 +492,7 @@
 <div class="modal" id="postModal">
   <div class="modal-box" style="position:relative">
     <button class="modal-close" onclick="closePostModal()">&times;</button>
-    <div class="modal-title">Post a photo</div>
+    <div class="modal-title">Post photos</div>
     <p style="color:var(--muted);font-size:0.82rem;margin-bottom:16px" id="postTargetLabel"></p>
 
     <div class="form-section">
@@ -464,12 +503,13 @@
       <div class="file-picker" id="filePicker" role="button" tabindex="0" onclick="openSourceSheet()" onkeydown="if(event.key==='Enter'||event.key===' ')openSourceSheet()">
         <div id="filePickerEmpty">
           <span class="picker-icon">&#128247;</span>
-          Tap to choose a photo
+          Tap to choose photos
         </div>
-        <img id="filePreview" class="hidden" alt="preview">
+        <div id="thumbGrid" class="thumb-grid"></div>
+        <div id="thumbAddMore" class="add-more-hint hidden">Tap to add more &middot; tap × to remove</div>
       </div>
       <input type="file" id="photoInputCamera"  accept="image/*" capture="environment" style="display:none">
-      <input type="file" id="photoInputLibrary" accept="image/*" style="display:none">
+      <input type="file" id="photoInputLibrary" accept="image/*" multiple style="display:none">
     </div>
 
     <div class="form-section">
@@ -480,7 +520,7 @@
 
     <label class="consent-row">
       <input type="checkbox" id="consentBox">
-      <span>I agree this photo can be displayed publicly and reposted by APA on social media or in event materials.</span>
+      <span>I agree these photos can be displayed publicly and reposted by APA on social media or in event materials.</span>
     </label>
 
     <div class="form-actions">
@@ -573,7 +613,11 @@ let _currentEvent = null;
 let _posts        = [];
 let _device       = null;       // { client_id, canvas_fp, ip_address, user_agent, platform, ... }
 let _isBanned     = false;
-let _selectedFile = null;
+// v1.1: multi-photo posting. Each entry { blob, url, name }. Files
+// flow in via library multi-select OR a single camera capture; submitPost
+// iterates and creates one snapshot.posts row per file with the same
+// caption applied to all.
+let _selectedFiles = [];
 let _versionMismatch = false;
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -902,21 +946,55 @@ function openPostModal() {
   }
   if (_isBanned) return;
   document.getElementById('postTargetLabel').textContent = 'Posting to: ' + _currentEvent.name;
-  _selectedFile = null;
+  clearSelectedFiles();
   document.getElementById('photoInputCamera').value = '';
   document.getElementById('photoInputLibrary').value = '';
   document.getElementById('captionInput').value = '';
   document.getElementById('consentBox').checked = false;
-  document.getElementById('filePreview').classList.add('hidden');
-  document.getElementById('filePreview').src = '';
-  document.getElementById('filePickerEmpty').classList.remove('hidden');
-  document.getElementById('filePicker').classList.remove('has-file');
   document.getElementById('charCount').textContent = '0 / 500';
   document.getElementById('charCount').classList.remove('over');
+  updatePostButtonText();
   document.getElementById('postModal').classList.add('shown');
 }
 function closePostModal() {
   document.getElementById('postModal').classList.remove('shown');
+}
+function clearSelectedFiles() {
+  for (const f of _selectedFiles) {
+    if (f && f.url) URL.revokeObjectURL(f.url);
+  }
+  _selectedFiles = [];
+  renderThumbs();
+}
+function renderThumbs() {
+  const grid = document.getElementById('thumbGrid');
+  const picker = document.getElementById('filePicker');
+  if (!_selectedFiles.length) {
+    grid.innerHTML = '';
+    picker.classList.remove('has-file');
+    return;
+  }
+  picker.classList.add('has-file');
+  grid.innerHTML = _selectedFiles.map((f, i) =>
+    '<div class="thumb">'
+    + '<img src="' + esc(f.url) + '" alt="">'
+    + '<button class="thumb-remove" type="button" '
+    +   'onclick="event.stopPropagation();removeSelected(' + i + ')" aria-label="Remove">&times;</button>'
+    + '</div>'
+  ).join('');
+}
+function removeSelected(i) {
+  const f = _selectedFiles[i];
+  if (f && f.url) URL.revokeObjectURL(f.url);
+  _selectedFiles.splice(i, 1);
+  renderThumbs();
+  updatePostButtonText();
+}
+function updatePostButtonText() {
+  const btn = document.getElementById('submitBtn');
+  if (!btn) return;
+  const n = _selectedFiles.length;
+  btn.textContent = n <= 1 ? 'Post' : ('Post ' + n + ' photos');
 }
 
 document.getElementById('addBtn').addEventListener('click', openPostModal);
@@ -961,33 +1039,43 @@ function pickFromLibrary() {
   document.getElementById('photoInputLibrary').click();
 }
 
-async function handlePhotoChosen(file) {
-  if (!file) return;
-  const isHeic = /\.(heic|heif)$/i.test(file.name) || /heic|heif/.test(file.type);
-  let blob = file;
-  if (isHeic) {
-    showToast('Converting iPhone photo\u2026');
-    try {
-      blob = await heicToJpeg(file);
-    } catch (e) {
-      showToast('Could not convert HEIC: ' + e.message, 'err');
-      return;
+// v1.1: handle 1+ files. Camera always supplies one; library may supply
+// many via the `multiple` attribute. Each is HEIC-converted if needed,
+// then appended to _selectedFiles. Existing thumbnails are preserved so
+// users can ADD more photos by tapping the picker again.
+async function handlePhotosChosen(fileList) {
+  if (!fileList || !fileList.length) return;
+  let didShowConvertingToast = false;
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    if (!file) continue;
+    const isHeic = /\.(heic|heif)$/i.test(file.name) || /heic|heif/.test(file.type);
+    let blob = file;
+    if (isHeic) {
+      if (!didShowConvertingToast) {
+        showToast('Converting iPhone photo\u2026');
+        didShowConvertingToast = true;
+      }
+      try { blob = await heicToJpeg(file); }
+      catch (e) {
+        showToast('Could not convert ' + (file.name || 'photo') + ': ' + e.message, 'err');
+        continue;
+      }
     }
+    const url = URL.createObjectURL(blob);
+    _selectedFiles.push({ blob, url, name: file.name || ('photo-' + i) });
   }
-  const url = URL.createObjectURL(blob);
-  const img = document.getElementById('filePreview');
-  img.src = url;
-  img.classList.remove('hidden');
-  document.getElementById('filePickerEmpty').classList.add('hidden');
-  document.getElementById('filePicker').classList.add('has-file');
-  _selectedFile = blob;
+  renderThumbs();
+  updatePostButtonText();
 }
 
 document.getElementById('photoInputCamera').addEventListener('change', (ev) => {
-  handlePhotoChosen(ev.target.files && ev.target.files[0]);
+  handlePhotosChosen(ev.target.files);
+  ev.target.value = ''; // reset so the same file can be re-chosen if removed
 });
 document.getElementById('photoInputLibrary').addEventListener('change', (ev) => {
-  handlePhotoChosen(ev.target.files && ev.target.files[0]);
+  handlePhotosChosen(ev.target.files);
+  ev.target.value = '';
 });
 
 document.getElementById('captionInput').addEventListener('input', (ev) => {
@@ -1044,13 +1132,15 @@ function loadImageFromBlob(blob) {
 }
 
 async function submitPost() {
-  if (!_selectedFile) { showToast('Pick a photo first', 'err'); return; }
+  if (!_selectedFiles.length) { showToast('Pick a photo first', 'err'); return; }
   if (!document.getElementById('consentBox').checked) {
     showToast('Please check the consent box to post', 'err'); return;
   }
   const caption = document.getElementById('captionInput').value.trim().substring(0, 500);
   const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true; submitBtn.textContent = 'Uploading\u2026';
+  submitBtn.disabled = true;
+  const total = _selectedFiles.length;
+  let succeeded = 0, failed = 0;
   try {
     // Re-check ban right at submit time (in case admin banned between
     // page load and now).
@@ -1060,58 +1150,75 @@ async function submitPost() {
       document.getElementById('bannedOverlay').classList.add('shown');
       return;
     }
-    // Resize for upload — keep mobile uploads snappy and storage cheap.
-    const resized = await resizeImage(_selectedFile, 1920);
-    // Generate path: <event-slug>/<unix-ts>-<rand>.jpg
-    const ts = Date.now();
-    const rand = Math.random().toString(36).slice(2, 10);
-    const path = _currentEvent.slug + '/' + ts + '-' + rand + '.jpg';
+    // v1.1: iterate every selected file. One snapshot.posts row per
+    // upload, shared caption across all of them. Per-file failures are
+    // tolerated so a network blip on photo 3 of 7 does not lose
+    // photos 1, 2, 4-7.
+    for (let i = 0; i < total; i++) {
+      const f = _selectedFiles[i];
+      submitBtn.textContent = total === 1 ? 'Posting\u2026' : ('Posting ' + (i + 1) + ' / ' + total + '\u2026');
+      try {
+        const resized = await resizeImage(f.blob, 1920);
+        const ts = Date.now();
+        const rand = Math.random().toString(36).slice(2, 10);
+        const path = _currentEvent.slug + '/' + ts + '-' + rand + '.jpg';
 
-    // Upload to Supabase Storage
-    const upRes = await fetch(SB_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + encodeURIComponent(path), {
-      method: 'POST',
-      headers: {
-        apikey: SB_ANON,
-        Authorization: 'Bearer ' + SB_ANON,
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, max-age=31536000'
-      },
-      body: resized
-    });
-    if (!upRes.ok) {
-      const err = await upRes.text();
-      throw new Error('Upload failed: ' + err.substring(0, 200));
-    }
+        const upRes = await fetch(SB_URL + '/storage/v1/object/' + STORAGE_BUCKET + '/' + encodeURIComponent(path), {
+          method: 'POST',
+          headers: {
+            apikey: SB_ANON,
+            Authorization: 'Bearer ' + SB_ANON,
+            'Content-Type': 'image/jpeg',
+            'Cache-Control': 'public, max-age=31536000'
+          },
+          body: resized
+        });
+        if (!upRes.ok) {
+          const err = await upRes.text();
+          throw new Error('Upload failed: ' + err.substring(0, 200));
+        }
 
-    // Insert row in snapshot.posts
-    const postRes = await fetch(SB_URL + '/rest/v1/posts', {
-      method: 'POST',
-      headers: { ...SB_HEADERS_WRITE, Prefer: 'return=representation' },
-      body: JSON.stringify({
-        event_id: _currentEvent.id,
-        photo_path: path,
-        caption: caption || null,
-        client_id: _device.client_id,
-        canvas_fp: _device.canvas_fp,
-        ip_address: _device.ip_address,
-        user_agent: _device.user_agent,
-        platform: _device.platform,
-        screen_size: _device.screen_size,
-        language: _device.language,
-        timezone: _device.timezone
-      })
-    });
-    if (!postRes.ok) {
-      const err = await postRes.text();
-      throw new Error('Save failed: ' + err.substring(0, 200));
+        const postRes = await fetch(SB_URL + '/rest/v1/posts', {
+          method: 'POST',
+          headers: { ...SB_HEADERS_WRITE, Prefer: 'return=representation' },
+          body: JSON.stringify({
+            event_id: _currentEvent.id,
+            photo_path: path,
+            caption: caption || null,
+            client_id: _device.client_id,
+            canvas_fp: _device.canvas_fp,
+            ip_address: _device.ip_address,
+            user_agent: _device.user_agent,
+            platform: _device.platform,
+            screen_size: _device.screen_size,
+            language: _device.language,
+            timezone: _device.timezone
+          })
+        });
+        if (!postRes.ok) {
+          const err = await postRes.text();
+          throw new Error('Save failed: ' + err.substring(0, 200));
+        }
+        succeeded++;
+      } catch (perFileErr) {
+        failed++;
+        showToast('Photo ' + (i + 1) + ' failed: ' + perFileErr.message, 'err');
+      }
     }
     closePostModal();
-    showToast('Posted!');
+    if (failed === 0) {
+      showToast(succeeded === 1 ? 'Posted!' : ('Posted ' + succeeded + ' photos!'));
+    } else if (succeeded > 0) {
+      showToast('Posted ' + succeeded + ' of ' + total + ' (some failed)');
+    } else {
+      showToast('All uploads failed', 'err');
+    }
     await loadFeed();
   } catch (e) {
     showToast(e.message, 'err');
   } finally {
-    submitBtn.disabled = false; submitBtn.textContent = 'Post';
+    submitBtn.disabled = false;
+    updatePostButtonText();
   }
 }
 
