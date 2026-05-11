@@ -784,17 +784,29 @@ function pickInitialEvent() {
     const match = _events.find(e => e.slug === reqSlug);
     if (match) return match;
   }
-  // Most recent open event whose date range covers today; else most recent
-  // ever created.
+  // v1.2: "next event by date" — independent of posting_open:
+  //   1. Live (today within start..end_or_start) — soonest-to-end wins.
+  //   2. Else: next upcoming (smallest start_date > today).
+  //   3. Else: most recent past (largest end_date < today).
+  // posting_open only controls the Add Photo button on the event view,
+  // not which event is the default surface.
   const today = new Date().toISOString().substring(0, 10);
-  const liveOpen = _events.find(e =>
-    e.posting_open && e.start_date <= today && e.end_date >= today);
-  if (liveOpen) return liveOpen;
-  // Then most recent open event regardless of dates
-  const openAny = _events.find(e => e.posting_open);
-  if (openAny) return openAny;
-  // Then anything
-  return _events[0] || null;
+  const endOf = e => e.end_date || e.start_date;
+
+  const live = _events
+    .filter(e => e.start_date <= today && endOf(e) >= today)
+    .sort((a, b) => endOf(a).localeCompare(endOf(b)));
+  if (live.length) return live[0];
+
+  const upcoming = _events
+    .filter(e => e.start_date > today)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  if (upcoming.length) return upcoming[0];
+
+  const past = _events
+    .filter(e => endOf(e) < today)
+    .sort((a, b) => endOf(b).localeCompare(endOf(a)));
+  return past[0] || _events[0] || null;
 }
 function renderEventPicker() {
   const sel = document.getElementById('eventPicker');
