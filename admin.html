@@ -119,6 +119,60 @@
   .admin-post .caption { padding: 4px 12px; font-size: 0.85rem; color: var(--text); }
   .admin-post .row { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; gap: 6px; flex-wrap: wrap; }
 
+  /* ── IG Drip multi-select (1.3+) ─────────────────────────────────── */
+  .admin-post.drip-sel { position: relative; transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
+  .admin-post.drip-sel.is-selected {
+    border-color: #2563eb; transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.28);
+  }
+  .drip-check {
+    position: absolute; top: 8px; left: 8px; z-index: 2;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.92); border: 2px solid #d1d5db;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-weight: 800; font-size: 0.84rem; color: #6b7280;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.16);
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    user-select: none;
+  }
+  .admin-post.drip-sel.is-selected .drip-check {
+    background: #2563eb; border-color: #1d4ed8; color: #fff; font-size: 0.92rem;
+  }
+  .drip-check:hover { border-color: #2563eb; color: #2563eb; }
+  .admin-post.drip-sel.is-selected .drip-check:hover { background: #1d4ed8; }
+
+  /* Drip Queue tab sections */
+  .drip-section { display: flex; flex-direction: column; gap: 12px; }
+  .drip-row {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  }
+  .drip-row-head {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
+  }
+  .drip-thumbs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .drip-thumb {
+    position: relative; width: 72px; height: 72px; border-radius: 6px; overflow: hidden;
+    background: #f3f4f6; border: 2px solid transparent;
+  }
+  .drip-thumb.is-hook { border-color: #2563eb; }
+  .drip-thumb.missing {
+    display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
+    color: #9ca3af; font-family: ui-monospace, monospace;
+  }
+  .drip-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .drip-thumb-idx {
+    position: absolute; top: 2px; left: 2px; background: rgba(0,0,0,0.7); color: #fff;
+    font-size: 0.66rem; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+  }
+  .drip-thumb.is-hook .drip-thumb-idx { background: #2563eb; }
+  .drip-caption {
+    margin-top: 6px; padding: 8px 10px; background: #f9fafb; border-left: 3px solid #2563eb;
+    font-size: 0.86rem; line-height: 1.4; white-space: pre-wrap;
+  }
+  .drip-actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+
   /* Key gate */
   .key-gate { text-align: center; padding: 60px 20px; }
   .key-gate .card { max-width: 440px; margin: 0 auto; text-align: center; }
@@ -176,6 +230,10 @@
       <input type="checkbox" id="eeOpen" style="width:18px;height:18px;cursor:pointer">
       Posting open
     </label>
+    <label style="display:inline-flex;align-items:center;gap:8px;font-size:0.82rem;color:var(--text);font-weight:600;cursor:pointer;margin-top:4px;margin-left:18px">
+      <input type="checkbox" id="eePrivate" style="width:18px;height:18px;cursor:pointer">
+      🔒 Private (hide from public picker)
+    </label>
     <div id="eeStatus" class="status-line" style="margin-top:10px"></div>
     <p class="hint" style="margin-top:8px">Changing the slug only updates the deep-link URL (<code>?event=&lt;slug&gt;</code>). Existing photo URLs keep working — they’re stored at upload time and don’t depend on the current slug.</p>
     <div class="modal-actions">
@@ -204,6 +262,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="events">Events</button>
     <button class="tab" data-tab="feed">Feed</button>
+    <button class="tab" data-tab="dripqueue">IG Drip</button>
     <button class="tab" data-tab="bans">Bans</button>
     <button class="tab" data-tab="stats">Stats</button>
     <button class="tab" data-tab="download">Download</button>
@@ -243,11 +302,15 @@
           <textarea id="evDesc" placeholder="One or two sentences&hellip;"></textarea>
         </div>
       </div>
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:0.86rem;color:var(--text);font-weight:600;cursor:pointer;margin-top:8px;padding:6px 10px;border-radius:6px;background:#fafafa;border:1px solid var(--border)">
+        <input type="checkbox" id="evPrivate" style="width:18px;height:18px;cursor:pointer">
+        🔒 Private — hide from public picker (1.3+, admin only)
+      </label>
       <div class="actions" style="margin-top:10px">
         <button class="btn btn-primary" onclick="doCreateEvent()">Create</button>
       </div>
       <div id="evCreateStatus" class="status-line" style="margin-top:10px"></div>
-      <p class="hint" style="margin-top:6px">Slug auto-generated from name.</p>
+      <p class="hint" style="margin-top:6px">Slug auto-generated from name. Private events stay visible to anyone with the deep-link URL <code>?event=&lt;slug&gt;</code> so you can bookmark one on your phone for in-the-moment capture.</p>
     </div>
 
     <div class="card">
@@ -284,6 +347,51 @@
       </div>
       <div id="adminFeedStatus" class="status-line" style="margin-top:12px"></div>
       <div id="adminFeed" class="admin-feed" style="margin-top:12px"></div>
+    </div>
+
+    <!-- ★ Multi-select action bar — sticky bottom, only visible when 1+ posts selected.
+         Capped at 10 (IG carousel max). Disables the Add button at >10 with a clear
+         "deselect N" instruction. -->
+    <div id="dripSelectBar" style="position:fixed;bottom:0;left:0;right:0;
+         background:#1f2937;color:#fff;padding:12px 18px;box-shadow:0 -4px 16px rgba(0,0,0,0.18);
+         z-index:50;display:none;align-items:center;gap:14px;font-weight:600">
+      <span id="dripSelectCount">0 selected</span>
+      <span id="dripSelectHint" style="font-size:0.82rem;font-weight:400;color:#9ca3af"></span>
+      <span style="flex:1"></span>
+      <button class="btn btn-outline btn-sm" onclick="dripClearSelection()"
+              style="background:transparent;color:#fff;border-color:#4b5563">Clear</button>
+      <button id="dripAddBtn" class="btn btn-primary btn-sm" onclick="dripAddSelectionToQueue()">
+        ★ Add to IG drip queue
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── IG Drip queue tab (1.3+) ─── -->
+  <div class="panel" id="tab-dripqueue">
+    <div class="card">
+      <h2>IG Drip queue</h2>
+      <p class="hint" style="margin-bottom:14px">
+        Curated carousels heading to Instagram. Items move
+        <strong>Needs review</strong> → <strong>Scheduled</strong> →
+        <strong>Published</strong>. Phase 1 stores the queue; the auto-publisher
+        worker comes in Phase 3.
+      </p>
+      <div id="dripCountdownChip" style="display:inline-block;padding:6px 14px;border-radius:999px;
+           background:#dbeafe;color:#1e40af;font-weight:800;font-size:0.86rem;margin-bottom:14px">
+        ⏳ Next post: <span id="dripCountdownText">no posts scheduled</span>
+      </div>
+
+      <!-- Section 1: Needs review -->
+      <h3 style="margin:18px 0 10px;font-size:1rem">Needs review</h3>
+      <div id="dripNeedsReview" class="drip-section"></div>
+
+      <!-- Section 2: Scheduled -->
+      <h3 style="margin:18px 0 10px;font-size:1rem">Scheduled</h3>
+      <div id="dripScheduled" class="drip-section"></div>
+
+      <!-- Section 3: Published (history) -->
+      <h3 style="margin:18px 0 10px;font-size:1rem">Published</h3>
+      <div id="dripPublished" class="drip-section"></div>
     </div>
   </div>
 
@@ -459,15 +567,19 @@ function photoUrl(path) {
 /* ════════════════════════════════════════════════════════════════════════
    TAB SWITCH
    ════════════════════════════════════════════════════════════════════════ */
-const TAB_LABEL = { events:'Events', feed:'Feed', bans:'Bans', stats:'Stats', download:'Download' };
+const TAB_LABEL = { events:'Events', feed:'Feed', dripqueue:'IG Drip', bans:'Bans', stats:'Stats', download:'Download' };
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   document.getElementById('appSubpage').textContent = TAB_LABEL[name] || '';
-  if (name === 'feed')     loadAdminFeed();
-  if (name === 'bans')     loadBans();
-  if (name === 'stats')    loadStats();
-  if (name === 'download') populateDownloadEvents();
+  // Selection bar is only meaningful on the Feed tab — hide otherwise.
+  const bar = document.getElementById('dripSelectBar');
+  if (bar) bar.style.display = (name === 'feed' && _dripSelected.size > 0) ? 'flex' : 'none';
+  if (name === 'feed')      loadAdminFeed();
+  if (name === 'dripqueue') loadDripQueue();
+  if (name === 'bans')      loadBans();
+  if (name === 'stats')     loadStats();
+  if (name === 'download')  populateDownloadEvents();
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -506,8 +618,11 @@ async function renderEventsTable() {
   body.innerHTML = _events.map(e => {
     const dates = e.start_date + ' \u2192 ' + e.end_date;
     const status = e.posting_open ? '<span class="badge ok">Open</span>' : '<span class="badge warn">Closed</span>';
+    const privateChip = e.is_private
+      ? ' <span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d">\ud83d\udd12 Private</span>'
+      : '';
     return '<tr>'
-      + '<td><strong>' + esc(e.name) + '</strong></td>'
+      + '<td><strong>' + esc(e.name) + '</strong>' + privateChip + '</td>'
       + '<td><code>' + esc(e.slug) + '</code></td>'
       + '<td>' + esc(dates) + '</td>'
       + '<td>' + esc(e.location || '') + '</td>'
@@ -544,6 +659,7 @@ function openEditEvent(id) {
   document.getElementById('eeCover').value = e.cover_photo_url || '';
   document.getElementById('eeDesc').value  = e.description || '';
   document.getElementById('eeOpen').checked = !!e.posting_open;
+  document.getElementById('eePrivate').checked = !!e.is_private;
   hideStatus('eeStatus');
   document.getElementById('editEventModal').classList.add('shown');
 }
@@ -561,7 +677,8 @@ async function saveEditedEvent() {
   const loc   = document.getElementById('eeLoc').value.trim();
   const cover = document.getElementById('eeCover').value.trim();
   const desc  = document.getElementById('eeDesc').value.trim();
-  const open  = document.getElementById('eeOpen').checked;
+  const open    = document.getElementById('eeOpen').checked;
+  const isPriv  = document.getElementById('eePrivate').checked;
   if (!name || !slug || !start || !end) return setStatus('eeStatus', 'Name, slug, start, and end are required.', 'err');
   if (end < start) return setStatus('eeStatus', 'End date can’t be before start.', 'err');
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) return setStatus('eeStatus', 'Slug must be lowercase letters, digits, hyphens (e.g. vegas-2026).', 'err');
@@ -571,7 +688,8 @@ async function saveEditedEvent() {
       location: loc || null,
       cover_photo_url: cover || null,
       description: desc || null,
-      posting_open: open
+      posting_open: open,
+      is_private: isPriv
     });
     setStatus('eeStatus', 'Saved.', 'ok');
     await loadEvents();
@@ -601,13 +719,15 @@ async function doCreateEvent() {
   if (end < start) return setStatus('evCreateStatus', 'End date can\u2019t be before start.', 'err');
   const slug = slugify(name);
   if (!slug) return setStatus('evCreateStatus', 'Could not generate slug. Pick a different name.', 'err');
+  const isPriv = document.getElementById('evPrivate').checked;
   try {
     await sb('POST', 'events', {
       slug, name, start_date: start, end_date: end,
       location: loc || null,
       cover_photo_url: cover || null,
       description: desc || null,
-      posting_open: true
+      posting_open: true,
+      is_private: isPriv
     });
     setStatus('evCreateStatus', 'Created.', 'ok');
     document.getElementById('evName').value = '';
@@ -616,6 +736,7 @@ async function doCreateEvent() {
     document.getElementById('evLoc').value = '';
     document.getElementById('evCover').value = '';
     document.getElementById('evDesc').value = '';
+    document.getElementById('evPrivate').checked = false;
     await loadEvents();
   } catch (e) { setStatus('evCreateStatus', 'Failed: ' + e.message, 'err'); }
 }
@@ -658,11 +779,20 @@ async function loadAdminFeed() {
       wrap.innerHTML = '<div class="hint">No posts match this filter.</div>';
       return;
     }
+    // Cache the rendered set so the selection bar can look up photo paths
+    // when building queue rows (which need URLs, not just ids).
+    _dripRenderedById = new Map(filtered.map(p => [p.id, p]));
     wrap.innerHTML = filtered.map(p => {
       const banned = isBanned(p);
       const ev = eventById[p.event_id];
-      return '<div class="admin-post' + (p.hidden ? ' hidden-post' : '') + (banned ? ' banned' : '') + '">'
-        + '<img loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt="">'
+      const isSel = _dripSelected.has(p.id);
+      const selIdx = isSel ? Array.from(_dripSelected).indexOf(p.id) + 1 : null;
+      return '<div class="admin-post drip-sel' + (isSel ? ' is-selected' : '') + (p.hidden ? ' hidden-post' : '') + (banned ? ' banned' : '') + '" data-post-id="' + p.id + '">'
+        // \u2605 Selection checkbox overlay (top-left). Click on overlay or the image toggles select.
+        + '<div class="drip-check" onclick="event.stopPropagation();dripToggleSelect(' + p.id + ')" title="Toggle select for IG drip">'
+          + (isSel ? '<span class="drip-check-num">' + selIdx + '</span>' : '<span class="drip-check-box">\u2605</span>')
+        + '</div>'
+        + '<img loading="lazy" src="' + esc(photoUrl(p.photo_path)) + '" alt="" onclick="dripToggleSelect(' + p.id + ')" style="cursor:pointer">'
         + '<div class="meta">'
           + (ev ? esc(ev.name) + ' \u00b7 ' : '')
           + esc(fmtDateTime(p.posted_at))
@@ -680,6 +810,7 @@ async function loadAdminFeed() {
         + '</div>'
         + '</div>';
     }).join('');
+    dripUpdateSelectionBar();
   } catch (e) {
     wrap.innerHTML = '';
     setStatus('adminFeedStatus', 'Failed: ' + e.message, 'err');
@@ -1005,6 +1136,222 @@ async function init() {
   await loadEvents();
   switchTab('events');
 }
+/* ════════════════════════════════════════════════════════════════════════
+   IG DRIP — Phase 1 (1.3+)
+   Multi-select photos on the Feed tab → add as one carousel to
+   snapshot.ig_queue with status='needs_review'. The Drip Queue tab lists
+   queued/scheduled/published items. No IG publisher yet — Phase 3.
+   ──────────────────────────────────────────────────────────────────────
+   Selection state lives in a Set (preserves insertion order = carousel
+   slide order). Cap = 10 (IG carousel maximum). Cross-event selection is
+   allowed — the user explicitly confirmed this is the desired behavior
+   (the Feed tab can already filter to one event OR show all).
+   ════════════════════════════════════════════════════════════════════════ */
+
+const DRIP_MAX = 10;
+const _dripSelected = new Set();           // ordered set of post ids (Set preserves insertion order)
+let   _dripRenderedById = new Map();        // post.id → post row (populated by loadAdminFeed)
+
+function dripToggleSelect(postId) {
+  if (_dripSelected.has(postId)) {
+    _dripSelected.delete(postId);
+  } else {
+    if (_dripSelected.size >= DRIP_MAX) {
+      // Show why nothing happened — silently no-op is worse UX.
+      dripFlashSelectionBar('Carousel max is ' + DRIP_MAX + ' photos · deselect one first');
+      return;
+    }
+    _dripSelected.add(postId);
+  }
+  // Re-render just the affected tile (cheap) OR re-render the whole feed
+  // for the numbering to update. Simpler to re-render whole feed.
+  loadAdminFeed();
+}
+function dripClearSelection() {
+  _dripSelected.clear();
+  loadAdminFeed();
+}
+function dripUpdateSelectionBar() {
+  const bar = document.getElementById('dripSelectBar');
+  if (!bar) return;
+  if (_dripSelected.size === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+  document.getElementById('dripSelectCount').textContent = _dripSelected.size + ' selected';
+  const hint = document.getElementById('dripSelectHint');
+  const addBtn = document.getElementById('dripAddBtn');
+  if (_dripSelected.size > DRIP_MAX) {
+    hint.textContent = 'Carousel max ' + DRIP_MAX + ' · deselect ' + (_dripSelected.size - DRIP_MAX);
+    addBtn.disabled = true; addBtn.style.opacity = '0.45'; addBtn.style.cursor = 'not-allowed';
+  } else {
+    hint.textContent = (_dripSelected.size === DRIP_MAX ? 'At cap' : 'Up to ' + (DRIP_MAX - _dripSelected.size) + ' more') + ' · numbers = carousel slide order';
+    addBtn.disabled = false; addBtn.style.opacity = '1'; addBtn.style.cursor = 'pointer';
+  }
+}
+function dripFlashSelectionBar(msg) {
+  const bar = document.getElementById('dripSelectBar');
+  const hint = document.getElementById('dripSelectHint');
+  if (!bar || !hint) return;
+  const prev = hint.textContent;
+  hint.textContent = msg;
+  hint.style.color = '#fca5a5';
+  setTimeout(() => { hint.textContent = prev; hint.style.color = '#9ca3af'; }, 1800);
+}
+
+async function dripAddSelectionToQueue() {
+  if (_dripSelected.size === 0) return;
+  if (_dripSelected.size > DRIP_MAX) { dripFlashSelectionBar('Too many — deselect to ' + DRIP_MAX); return; }
+  const ids = Array.from(_dripSelected);
+  // Source note: which events contributed (cross-event is allowed).
+  const evs = new Set();
+  for (const id of ids) {
+    const p = _dripRenderedById.get(id);
+    if (p) {
+      const e = _events.find(x => x.id === p.event_id);
+      if (e) evs.add(e.name);
+    }
+  }
+  const sourceNote = 'From: ' + Array.from(evs).join(', ');
+  try {
+    await sb('POST', 'ig_queue', {
+      status: 'needs_review',
+      photo_ids: ids,           // ordered jsonb array — selection order = slide order
+      hook_slide_idx: 0,
+      source_note: sourceNote,
+      created_by: 'admin'
+    });
+    _dripSelected.clear();
+    loadAdminFeed();
+    // Pop a status line at the top of the Feed tab.
+    setStatus('adminFeedStatus', '✓ Carousel of ' + ids.length + ' photo' + (ids.length === 1 ? '' : 's') + ' added to IG drip queue', 'ok');
+    setTimeout(() => hideStatus('adminFeedStatus'), 3200);
+  } catch (e) {
+    setStatus('adminFeedStatus', 'Failed: ' + e.message, 'err');
+  }
+}
+
+/* ── Drip Queue tab renderer ─────────────────────────────────────── */
+async function loadDripQueue() {
+  const targets = [
+    { id: 'dripNeedsReview', status: 'needs_review', empty: 'No carousels awaiting review.' },
+    { id: 'dripScheduled',   status: 'scheduled',    empty: 'No carousels scheduled.' },
+    { id: 'dripPublished',   status: 'published',    empty: 'No carousels published yet.' }
+  ];
+  // Fetch all queue rows in one call (small table; cheap).
+  let rows = [];
+  try {
+    rows = await sb('GET', 'ig_queue?select=*&order=created_at.desc');
+  } catch (e) {
+    for (const t of targets) document.getElementById(t.id).innerHTML = '<div class="hint">Failed: ' + esc(e.message) + '</div>';
+    return;
+  }
+  // Build a post-id → post-row map for thumbnails (one-shot fetch of needed posts).
+  const allPhotoIds = new Set();
+  for (const r of rows) for (const pid of (r.photo_ids || [])) allPhotoIds.add(pid);
+  let postsById = new Map();
+  if (allPhotoIds.size) {
+    try {
+      const idList = Array.from(allPhotoIds).join(',');
+      const posts = await sb('GET', 'posts?select=id,photo_path,caption,event_id&id=in.(' + idList + ')');
+      postsById = new Map(posts.map(p => [p.id, p]));
+    } catch (_) {}
+  }
+  const eventById = Object.fromEntries(_events.map(e => [e.id, e]));
+
+  for (const t of targets) {
+    const subset = rows.filter(r => r.status === t.status);
+    const el = document.getElementById(t.id);
+    if (!subset.length) { el.innerHTML = '<div class="hint">' + t.empty + '</div>'; continue; }
+    el.innerHTML = subset.map(r => dripRenderRow(r, postsById, eventById)).join('');
+  }
+  dripUpdateCountdown(rows);
+}
+
+function dripRenderRow(r, postsById, eventById) {
+  const ids = r.photo_ids || [];
+  const thumbs = ids.slice(0, 10).map((pid, i) => {
+    const p = postsById.get(pid);
+    if (!p) return '<div class="drip-thumb missing" title="post #' + pid + ' deleted">' + pid + '</div>';
+    return '<div class="drip-thumb' + (i === r.hook_slide_idx ? ' is-hook' : '') + '" title="' + esc(p.caption || '') + '">'
+      + '<img src="' + esc(photoUrl(p.photo_path)) + '" alt="" loading="lazy">'
+      + '<span class="drip-thumb-idx">' + (i + 1) + '</span>'
+      + '</div>';
+  }).join('');
+  const created = fmtDateTime(r.created_at);
+  const scheduled = r.scheduled_for ? fmtDateTime(r.scheduled_for) : '—';
+  const posted = r.posted_at ? fmtDateTime(r.posted_at) : '';
+  const statusBadge = ({
+    needs_review: '<span class="badge" style="background:#fef3c7;color:#92400e">Needs review</span>',
+    scheduled:    '<span class="badge" style="background:#dbeafe;color:#1e40af">Scheduled</span>',
+    publishing:   '<span class="badge" style="background:#fed7aa;color:#9a3412">Publishing…</span>',
+    published:    '<span class="badge ok">Published</span>',
+    error:        '<span class="badge warn">Error</span>',
+    cancelled:    '<span class="badge">Cancelled</span>'
+  })[r.status] || '';
+
+  // Phase 1: minimal actions. Cancel removes the row from the queue.
+  // Phase 2 will add: Pick caption, Edit, Schedule, etc.
+  const actions = '<div class="drip-actions">'
+    + (r.status === 'needs_review'
+        ? '<button class="btn btn-outline btn-sm" onclick="dripCancel(' + r.id + ')">Remove from queue</button>'
+        : r.status === 'scheduled'
+        ? '<button class="btn btn-outline btn-sm" onclick="dripCancel(' + r.id + ')">Unschedule</button>'
+        : '')
+    + '</div>';
+
+  return '<div class="drip-row">'
+    + '<div class="drip-row-head">'
+      +   '<div>' + statusBadge
+        + ' <span class="hint" style="margin-left:8px">#' + r.id + ' · ' + esc(created) + '</span>'
+      + '</div>'
+      + (r.scheduled_for ? '<div class="hint">Goes live: <strong>' + esc(scheduled) + '</strong></div>' : '')
+      + (r.posted_at     ? '<div class="hint">Posted: <strong>' + esc(posted) + '</strong></div>' : '')
+    + '</div>'
+    + '<div class="drip-thumbs">' + thumbs + '</div>'
+    + (r.source_note ? '<div class="hint" style="margin-top:6px">' + esc(r.source_note) + '</div>' : '')
+    + (r.caption ? '<div class="drip-caption">' + esc(r.caption) + '</div>' : '<div class="hint" style="margin-top:6px;font-style:italic">No caption yet (Phase 2)</div>')
+    + actions
+    + '</div>';
+}
+
+async function dripCancel(id) {
+  if (!confirm('Remove this carousel from the queue? Photos are not deleted.')) return;
+  try {
+    await sb('DELETE', 'ig_queue?id=eq.' + id);
+    await loadDripQueue();
+  } catch (e) { alert('Failed: ' + e.message); }
+}
+
+function dripUpdateCountdown(rows) {
+  // Pick the next scheduled row in the future. Phase 3 will tie this to
+  // the worker's actual cron firing; for now it's just informational.
+  const next = (rows || [])
+    .filter(r => r.status === 'scheduled' && r.scheduled_for)
+    .map(r => ({ ts: new Date(r.scheduled_for).getTime(), row: r }))
+    .filter(x => x.ts > Date.now())
+    .sort((a, b) => a.ts - b.ts)[0];
+  const el = document.getElementById('dripCountdownText');
+  if (!el) return;
+  if (!next) { el.textContent = 'no posts scheduled'; return; }
+  const ms = next.ts - Date.now();
+  const days  = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const mins  = Math.floor((ms % 3600000) / 60000);
+  const parts = [];
+  if (days)  parts.push(days + 'd');
+  if (hours) parts.push(hours + 'h');
+  parts.push(mins + 'm');
+  el.textContent = 'in ' + parts.join(' ') + ' · ' + fmtDateTime(next.row.scheduled_for);
+}
+
+// Expose drip globals to inline onclick handlers.
+window.dripToggleSelect       = dripToggleSelect;
+window.dripClearSelection     = dripClearSelection;
+window.dripAddSelectionToQueue = dripAddSelectionToQueue;
+window.dripCancel             = dripCancel;
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
