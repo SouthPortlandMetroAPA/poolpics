@@ -1088,13 +1088,24 @@ async function handlePhotosChosen(fileList) {
   updatePostButtonText();
 }
 
+// 1.4: clone the FileList into a plain array BEFORE resetting input.value.
+// FileList is a LIVE collection bound to the input — on some browsers
+// (notably Chromium on certain Samsung Android builds) resetting `.value`
+// clears or shrinks the FileList while handlePhotosChosen is mid-iteration
+// (the await inside the HEIC-conversion branch yields control, the reset
+// runs synchronously after the call returns, and subsequent fileList[i]
+// reads return undefined). Spread captures File refs by value, immune to
+// the input reset. Defensive — no-op on browsers that don't have the
+// quirk, fixes it on every browser that does.
 document.getElementById('photoInputCamera').addEventListener('change', (ev) => {
-  handlePhotosChosen(ev.target.files);
+  const files = [...ev.target.files];
   ev.target.value = ''; // reset so the same file can be re-chosen if removed
+  handlePhotosChosen(files);
 });
 document.getElementById('photoInputLibrary').addEventListener('change', (ev) => {
-  handlePhotosChosen(ev.target.files);
+  const files = [...ev.target.files];
   ev.target.value = '';
+  handlePhotosChosen(files);
 });
 
 document.getElementById('captionInput').addEventListener('input', (ev) => {
